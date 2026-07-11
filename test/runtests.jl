@@ -90,10 +90,12 @@ using Test
         robust  = default_solver_configs()[2]         # Newton/Backtracking
         hermite = first(default_initial_guesses())
 
-        @testset "$name" for (name, mk) in
+        # both the native step (Δt = 0.01) and the coarser Δt = 0.1
+        @testset "$name at Δt = $dt" for (name, mk) in
                 (("LotkaVolterra2d", lotka_volterra_2d_spec),
-                 ("LotkaVolterra4d", lotka_volterra_4d_spec))
-            spec = mk(timespan = (0.0, 2.0), timestep = 0.01)
+                 ("LotkaVolterra4d", lotka_volterra_4d_spec)),
+                dt in (0.01, 0.1)
+            spec = mk(timespan = (0.0, 2.0), timestep = dt)
 
             # a robust solver converges at Float64
             row = run_case(spec, Float64, robust, hermite; timing = :quick, quiet = true)

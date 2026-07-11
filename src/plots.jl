@@ -1,5 +1,15 @@
 const _PRECISION_ORDER = ["Float16", "Float32", "Float64"]
 
+# Display order for the initial guesses (panels/rows in the plots and tables).
+const _INITIAL_GUESS_ORDER = ["NoInitialGuess", "HermiteExtrapolation", "MidpointExtrapolation"]
+
+# Return the distinct values present in `values`, ordered according to `order`
+# (values not listed in `order` are appended in first-appearance order).
+function _ordered(values, order)
+    present = unique(values)
+    vcat([v for v in order if v in present], [v for v in present if v ∉ order])
+end
+
 """
     summary_table(df; drop_empty = true)
 
@@ -15,7 +25,7 @@ function summary_table(df::DataFrame; drop_empty::Bool = true)
 
     porder = Dict(p => i for (i, p) in enumerate(_PRECISION_ORDER))
     sorder = Dict(s => i for (i, s) in enumerate(unique(df.solver_label)))
-    gorder = Dict(g => i for (i, g) in enumerate(unique(df.initial_guess)))
+    gorder = Dict(g => i for (i, g) in enumerate(_ordered(df.initial_guess, _INITIAL_GUESS_ORDER)))
     sort!(out, [DataFrames.order(:precision, by = p -> get(porder, p, 99)),
                 DataFrames.order(:solver_label, by = s -> get(sorder, s, 99)),
                 DataFrames.order(:initial_guess, by = g -> get(gorder, g, 99))])
@@ -69,7 +79,7 @@ function comparison_figure(df::DataFrame, valcol::Symbol;
                            converged_only::Bool = false)
 
     # category axes come from the full grid so failing configs keep their tick
-    igs     = unique(df.initial_guess)
+    igs     = _ordered(df.initial_guess, _INITIAL_GUESS_ORDER)
     solvers = unique(df.solver_label)
     precs   = filter(p -> p in df.precision, _PRECISION_ORDER)
     converged_only && (df = df[df.converged, :])
@@ -165,7 +175,7 @@ solver configurations on the x-axis and precisions on the y-axis. Green cells
 converged, red cells did not.
 """
 function plot_convergence(df::DataFrame; title::AbstractString = "")
-    igs     = unique(df.initial_guess)
+    igs     = _ordered(df.initial_guess, _INITIAL_GUESS_ORDER)
     solvers = unique(df.solver_label)
     precs   = filter(p -> p in df.precision, _PRECISION_ORDER)
 
