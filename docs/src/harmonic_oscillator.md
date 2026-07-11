@@ -8,7 +8,9 @@ precision rather than by nonlinearity.
 
 The benchmark below is regenerated at documentation build time with a single,
 fast timing pass. See the driver script `scripts/harmonic_oscillator.jl` for
-accurate `BenchmarkTools` measurements.
+accurate `BenchmarkTools` measurements. The results are shown first for the
+standard step ``\Delta t = 0.1`` and then repeated for a coarse step
+``\Delta t = 1.0`` (see [Coarse time step (Δt = 1.0)](@ref harmonic_oscillator_dt1)).
 
 ```@example ho
 using SolverBenchmark
@@ -84,4 +86,53 @@ plot_accuracy(df)
 
 ```@example ho
 markdown_table(summary_table(df))
+```
+
+## [Coarse time step (Δt = 1.0)](@id harmonic_oscillator_dt1)
+
+The same benchmark with a ten times larger step. For the linear oscillator the
+implicit equations stay linear, so `Newton` still converges in one iteration; the
+main effect is on `Picard` (many more iterations) and on the energy drift.
+
+```@example ho
+spec1 = harmonic_oscillator_spec(timespan = (0.0, 100.0), timestep = 1.0)
+df1   = run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+
+nothing # hide
+```
+
+### Convergence
+
+```@example ho
+plot_convergence(df1; title = "Harmonic Oscillator (Δt = 1.0)")
+```
+
+### Nonlinear iterations
+
+```@example ho
+plot_iterations(df1)
+```
+
+### Run time
+
+```@example ho
+plot_runtime(df1)
+```
+
+### Energy drift
+
+```@example ho
+plot_energy_drift(df1)
+```
+
+### Accuracy
+
+```@example ho
+plot_accuracy(df1)
+```
+
+### Results table
+
+```@example ho
+markdown_table(summary_table(df1))
 ```
