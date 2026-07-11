@@ -11,9 +11,19 @@ makedocs(;
         canonical="https://michakraus.github.io/SolverBenchmark.jl",
         edit_link="main",
         assets=String[],
+        # analysis pages embed several figures as base64, exceeding the default limit
+        size_threshold=2_000_000,
+        size_threshold_warn=1_000_000,
     ),
     pages=[
         "Home" => "index.md",
+        "Analyses" => [
+            "Harmonic Oscillator" => "harmonic_oscillator.md",
+            "Pendulum" => "pendulum.md",
+            "Lotka–Volterra (2d)" => "lotka_volterra_2d.md",
+            "Lotka–Volterra (4d)" => "lotka_volterra_4d.md",
+        ],
+        "API" => "api.md",
     ],
 )
 
