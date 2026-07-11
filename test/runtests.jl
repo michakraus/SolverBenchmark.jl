@@ -135,4 +135,35 @@ using Test
             @test count(df.converged) ≥ 4
         end
     end
+
+    @testset "Hamiltonian systems (hodeproblem)" begin
+        robust  = default_solver_configs()[2]         # Newton/Backtracking
+        hermite = first(default_initial_guesses())
+
+        # double pendulum at its standard Δt = 0.01 and the coarse Δt = 0.1;
+        # Toda lattice (N = 16) at its standard Δt = 0.1 and the coarse Δt = 1.0.
+        # Short time spans keep the 16-dimensional implicit solves fast.
+        @testset "$name at Δt = $dt" for (name, mk, tspan, dts) in
+                (("DoublePendulum", double_pendulum_spec, (0.0, 1.0), (0.01, 0.1)),
+                 ("TodaLattice",    toda_lattice_spec,    (0.0, 1.0), (0.1, 1.0))),
+                dt in dts
+            spec = mk(timespan = tspan, timestep = dt)
+
+            # a robust solver converges at Float64, and the p-aware energy proxy
+            # produces a finite drift for these Hamiltonian systems
+            row = run_case(spec, Float64, robust, hermite; timing = :none, quiet = true)
+            @test row.problem == name
+            @test row.converged
+            @test row.iterations_mean ≥ 1
+            @test row.accuracy === missing            # no analytic reference
+            @test row.energy_drift !== missing        # energy needs both q and p
+
+            # the grid runs through the HODE path for one precision/guess
+            df = run_benchmark(spec; precisions = (Float64,),
+                               initial_guesses = default_initial_guesses()[1:1],
+                               timing = :none, verbose = false, quiet = true)
+            @test nrow(df) == 8
+            @test count(df.converged) ≥ 4
+        end
+    end
 end

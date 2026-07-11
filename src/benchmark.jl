@@ -125,13 +125,18 @@ function run_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, igcfg::Initi
         accuracy     = missing
         if res.converged
             sol = res.sol
-            t₀, x₀ = sol.t[0], sol.q[0]
-            t₁, x₁ = sol.t[res.last_good], sol.q[res.last_good]
-            H₀ = spec.energy(t₀, x₀, params)
-            H₁ = spec.energy(t₁, x₁, params)
+            # HODE/IODE solutions carry a separate momentum `p`; ODE solutions do
+            # not (their state is bundled into `q`), so pass `nothing` there.
+            hasp = hasproperty(sol, :p)
+            t₀, q₀ = sol.t[0], sol.q[0]
+            t₁, q₁ = sol.t[res.last_good], sol.q[res.last_good]
+            p₀ = hasp ? sol.p[0] : nothing
+            p₁ = hasp ? sol.p[res.last_good] : nothing
+            H₀ = spec.energy(t₀, q₀, p₀, params)
+            H₁ = spec.energy(t₁, q₁, p₁, params)
             energy_drift = Float64(abs(H₁ - H₀))
             if spec.reference !== nothing
-                accuracy = Float64(maximum(abs, x₁ .- spec.reference(t₁, x₀, params)))
+                accuracy = Float64(maximum(abs, q₁ .- spec.reference(t₁, q₀, params)))
             end
         end
 

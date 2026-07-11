@@ -18,6 +18,12 @@ const ANALYSES = [
     lotka_volterra_2d_spec(timespan = (0.0, 10.0), timestep = 0.1),
     lotka_volterra_4d_spec(timespan = (0.0, 10.0), timestep = 0.01),
     lotka_volterra_4d_spec(timespan = (0.0, 10.0), timestep = 0.1),
+    # double pendulum (hodeproblem), at the standard and the coarse time step
+    double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.01),
+    double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.1),
+    # Toda lattice with N = 16 (hodeproblem), at the standard and the coarse time step
+    toda_lattice_spec(timespan = (0.0, 100.0), timestep = 0.1),
+    toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0),
 ]
 
 for spec in ANALYSES

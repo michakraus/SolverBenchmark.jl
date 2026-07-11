@@ -9,8 +9,11 @@ problem from `GeometricProblems.jl`.
 # Fields
 - `name::String`: human readable problem name (used for labelling and file names).
 - `builder`: callable `T -> problem` returning an `ODEProblem` at precision `T`.
-- `energy`: callable `(t, x, params) -> H` computing the conserved energy /
-  invariant from a state vector `x`. Used as an accuracy proxy (energy drift).
+- `energy`: callable `(t, q, p, params) -> H` computing the conserved energy /
+  invariant from the positions `q` and momenta `p`. Used as an accuracy proxy
+  (energy drift). `p` is `nothing` for problems whose solution carries no separate
+  momentum (an `ODEProblem` state already bundles both into `q`); Hamiltonians
+  that depend on positions alone simply ignore the argument.
 - `reference`: callable `(t, x₀, params) -> x` giving the analytic solution at
   time `t`, or `nothing` when no closed-form solution is available.
 """
@@ -35,7 +38,7 @@ function harmonic_oscillator_spec(; x₀ = [0.5, 0.0], timespan = (0.0, 100.0), 
     builder = T -> HarmonicOscillator.odeproblem(T.(x₀);
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep))
 
-    energy = (t, x, params) -> HarmonicOscillator.hamiltonian(t, x, params)
+    energy = (t, q, p, params) -> HarmonicOscillator.hamiltonian(t, q, params)
 
     reference = function (t, x₀, params)
         ω = sqrt(params.k)            # dynamical frequency of ẍ = -k x
@@ -61,7 +64,7 @@ function pendulum_spec(; x₀ = [acos(0.4), 0.0], timespan = (0.0, 100.0), times
     builder = T -> Pendulum.odeproblem(T.(x₀);
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep))
 
-    energy = (t, x, params) -> Pendulum.hamiltonian(t, x, params)
+    energy = (t, q, p, params) -> Pendulum.hamiltonian(t, q, params)
 
     ProblemSpec("Pendulum", builder, energy, nothing)
 end
@@ -88,7 +91,7 @@ function lotka_volterra_2d_spec(; q₀ = [2.0, 1.0], timespan = (0.0, 10.0), tim
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
         parameters = _typed_parameters(T, LotkaVolterra2d.default_parameters))
 
-    energy = (t, x, params) -> LotkaVolterra2d.hamiltonian(t, x, params)
+    energy = (t, q, p, params) -> LotkaVolterra2d.hamiltonian(t, q, params)
 
     ProblemSpec("LotkaVolterra2d", builder, energy, nothing)
 end
@@ -110,7 +113,64 @@ function lotka_volterra_4d_spec(; q₀ = [2.0, 1.0, 1.0, 1.0], timespan = (0.0, 
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
         parameters = _typed_parameters(T, LotkaVolterra4d.default_parameters))
 
-    energy = (t, x, params) -> LotkaVolterra4d.hamiltonian(t, x, params)
+    energy = (t, q, p, params) -> LotkaVolterra4d.hamiltonian(t, q, params)
 
     ProblemSpec("LotkaVolterra4d", builder, energy, nothing)
+end
+
+"""
+    double_pendulum_spec(; q₀ = DoublePendulum.θ₀, p₀ = DoublePendulum.p₀,
+                           timespan = (0.0, 10.0), timestep = 0.01)
+
+Return a [`ProblemSpec`](@ref) for the double pendulum from
+`GeometricProblems.DoublePendulum`, built as an **`hodeproblem`** (canonical
+Hamiltonian form). This is a chaotic, strongly nonlinear system, so it exercises
+the nonlinear solvers hard. Its Hamiltonian `H(t, q, p)` depends on **both** the
+generalized coordinates `q` and the momenta `p`, so the energy proxy is evaluated
+from the full `(q, p)` state. No closed-form solution exists; accuracy is
+assessed through the energy drift.
+
+The default initial conditions and parameters are the problem's own module
+defaults; the native time span is `(0, 10)` with the standard `Δt = 0.01`
+(a coarse `Δt = 0.1` is used as a second scenario).
+"""
+function double_pendulum_spec(; q₀ = DoublePendulum.θ₀, p₀ = DoublePendulum.p₀,
+                                timespan = (0.0, 10.0), timestep = 0.01)
+    builder = T -> DoublePendulum.hodeproblem(T.(q₀), T.(p₀);
+        timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
+        parameters = _typed_parameters(T, DoublePendulum.default_parameters))
+
+    energy = (t, q, p, params) -> DoublePendulum.hamiltonian(t, q, p, params)
+
+    ProblemSpec("DoublePendulum", builder, energy, nothing)
+end
+
+"""
+    toda_lattice_spec(; N = 16, μ = 0.3, timespan = (0.0, 100.0), timestep = 0.1)
+
+Return a [`ProblemSpec`](@ref) for the Toda lattice from
+`GeometricProblems.TodaLattice`, built as an **`hodeproblem`** with `N = 16`
+lattice sites. The full soliton example uses `N = 200`, which would make the
+implicit solves prohibitively expensive for a solver benchmark, so a modest
+`N = 16` is used here. The lattice size is passed positionally to `hodeproblem`;
+the initial positions come from `compute_initial_q(μ, N)` (a bump of width `μ`)
+with zero initial momenta. Its Hamiltonian `H(t, q, p, N)` depends on both `q`
+and `p` (and on `N`, which the energy closure captures). No closed-form solution
+exists; accuracy is assessed through the energy drift.
+
+The native time span `(0, 120)` is shortened to `(0, 100)` with the standard
+`Δt = 0.1`; a coarse `Δt = 1.0` is used as a second scenario.
+"""
+function toda_lattice_spec(; N = 16, μ = 0.3, timespan = (0.0, 100.0), timestep = 0.1)
+    builder = function (T)
+        q₀ = T.(TodaLattice.compute_initial_q(μ, N))
+        p₀ = zero(q₀)
+        TodaLattice.hodeproblem(N, q₀, p₀;
+            timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
+            parameters = _typed_parameters(T, TodaLattice.default_parameters))
+    end
+
+    energy = (t, q, p, params) -> TodaLattice.hamiltonian(t, q, p, params, N)
+
+    ProblemSpec("TodaLattice", builder, energy, nothing)
 end

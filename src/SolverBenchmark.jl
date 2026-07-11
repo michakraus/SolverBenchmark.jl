@@ -22,10 +22,13 @@ import GeometricProblems.HarmonicOscillator
 import GeometricProblems.Pendulum
 import GeometricProblems.LotkaVolterra2d
 import GeometricProblems.LotkaVolterra4d
+import GeometricProblems.DoublePendulum
+import GeometricProblems.TodaLattice
 
 # problem definitions
 export ProblemSpec, harmonic_oscillator_spec, pendulum_spec
 export lotka_volterra_2d_spec, lotka_volterra_4d_spec
+export double_pendulum_spec, toda_lattice_spec
 
 # benchmark configuration
 export SolverConfig, InitialGuessConfig
