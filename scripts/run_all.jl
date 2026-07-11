@@ -13,9 +13,11 @@ const ANALYSES = [
     harmonic_oscillator_spec(timespan = (0.0, 100.0), timestep = 1.0),
     pendulum_spec(timespan = (0.0, 100.0), timestep = 0.1),
     pendulum_spec(timespan = (0.0, 100.0), timestep = 1.0),
-    # Lotka–Volterra systems (iodeproblem) at their native step
-    lotka_volterra_2d_spec(),
-    lotka_volterra_4d_spec(),
+    # Lotka–Volterra systems (iodeproblem), at the native and a coarse time step
+    lotka_volterra_2d_spec(timespan = (0.0, 10.0), timestep = 0.01),
+    lotka_volterra_2d_spec(timespan = (0.0, 10.0), timestep = 0.1),
+    lotka_volterra_4d_spec(timespan = (0.0, 10.0), timestep = 0.01),
+    lotka_volterra_4d_spec(timespan = (0.0, 10.0), timestep = 0.1),
 ]
 
 for spec in ANALYSES
