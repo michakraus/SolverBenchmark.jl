@@ -50,6 +50,21 @@ added easily.
   (`(l, m, g)`) and `odeproblem` carries them. Lotka–Volterra `hamiltonian(t, q, params)`
   depends on `q` alone (params required, no default method).
 - Documenter inlines figures as base64 → raise `size_threshold` in `Documenter.HTML`.
+- **Plot/table initial-guess order** is fixed via `_INITIAL_GUESS_ORDER` in
+  `plots.jl` (`NoInitialGuess`, `HermiteExtrapolation`, `MidpointExtrapolation`),
+  not the benchmark's row order — used by `comparison_figure`, `plot_convergence`,
+  and `summary_table`.
+
+## CI (`.github/workflows/CI.yml`)
+
+- `macOS-latest` is now arm64 — do **not** force `arch: x64` (setup-julia errors);
+  leave `arch` unspecified so the runner's native arch is used.
+- Use Julia `'1'` (latest stable), not `'1.13'` (unreleased → "Could not find a
+  Julia version that matches 1.13").
+- `nightly` is `continue-on-error` (it often fails upstream and would otherwise
+  fail the workflow). All `1.10`/`1` jobs on ubuntu/macOS/windows + docs pass.
+- Pushes to `main` queue (concurrency does not cancel in-progress); Dependabot
+  Actions-bump PRs auto-merge and may need a `git rebase origin/main`.
 
 ## Key findings
 
