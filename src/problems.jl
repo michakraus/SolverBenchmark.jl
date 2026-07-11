@@ -16,15 +16,23 @@ problem from `GeometricProblems.jl`.
   that depend on positions alone simply ignore the argument.
 - `reference`: callable `(t, x₀, params) -> x` giving the analytic solution at
   time `t`, or `nothing` when no closed-form solution is available.
+- `f_abstol_factor::Float64`: the nonlinear solver's absolute residual tolerance
+  is `f_abstol_factor * eps(T)`. Defaults to `8` (the integrator's own default).
+  Larger-scale Hamiltonian systems whose residual floor sits well above
+  `8 eps(T)` (e.g. the double pendulum, whose forces are `O(g m l)`) need a
+  looser tolerance, otherwise the solver iterates against an unreachable target
+  and is spuriously reported as non-converged.
 """
 struct ProblemSpec
     name::String
     builder::Function
     energy::Function
     reference::Union{Function,Nothing}
+    f_abstol_factor::Float64
 end
 
-ProblemSpec(name, builder, energy) = ProblemSpec(name, builder, energy, nothing)
+ProblemSpec(name, builder, energy, reference = nothing; f_abstol_factor::Real = 8) =
+    ProblemSpec(name, builder, energy, reference, Float64(f_abstol_factor))
 
 """
     harmonic_oscillator_spec(; x₀ = [0.5, 0.0], timespan = (0.0, 100.0), timestep = 0.1)
@@ -133,6 +141,12 @@ assessed through the energy drift.
 The default initial conditions and parameters are the problem's own module
 defaults; the native time span is `(0, 10)` with the standard `Δt = 0.01`
 (a coarse `Δt = 0.1` is used as a second scenario).
+
+Because the double pendulum's forces are `O(g m l)`, its nonlinear residual
+bottoms out around `10² eps(T)` rather than `eps(T)`, so the solver's residual
+tolerance is relaxed to `256 eps(T)` (`f_abstol_factor = 256`); with the default
+`8 eps(T)` even a fully solved step is reported as non-converged (and at
+`Float32` no configuration converges at all).
 """
 function double_pendulum_spec(; q₀ = DoublePendulum.θ₀, p₀ = DoublePendulum.p₀,
                                 timespan = (0.0, 10.0), timestep = 0.01)
@@ -142,7 +156,7 @@ function double_pendulum_spec(; q₀ = DoublePendulum.θ₀, p₀ = DoublePendul
 
     energy = (t, q, p, params) -> DoublePendulum.hamiltonian(t, q, p, params)
 
-    ProblemSpec("DoublePendulum", builder, energy, nothing)
+    ProblemSpec("DoublePendulum", builder, energy, nothing; f_abstol_factor = 256)
 end
 
 """
@@ -159,7 +173,10 @@ and `p` (and on `N`, which the energy closure captures). No closed-form solution
 exists; accuracy is assessed through the energy drift.
 
 The native time span `(0, 120)` is shortened to `(0, 100)` with the standard
-`Δt = 0.1`; a coarse `Δt = 1.0` is used as a second scenario.
+`Δt = 0.1`; a coarse `Δt = 1.0` is used as a second scenario. As for the double
+pendulum the residual tolerance is relaxed to `256 eps(T)`
+(`f_abstol_factor = 256`), which also lets more configurations converge at
+`Float16`.
 """
 function toda_lattice_spec(; N = 16, μ = 0.3, timespan = (0.0, 100.0), timestep = 0.1)
     builder = function (T)
@@ -172,5 +189,5 @@ function toda_lattice_spec(; N = 16, μ = 0.3, timespan = (0.0, 100.0), timestep
 
     energy = (t, q, p, params) -> TodaLattice.hamiltonian(t, q, p, params, N)
 
-    ProblemSpec("TodaLattice", builder, energy, nothing)
+    ProblemSpec("TodaLattice", builder, energy, nothing; f_abstol_factor = 256)
 end

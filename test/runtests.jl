@@ -165,5 +165,16 @@ using Test
             @test nrow(df) == 8
             @test count(df.converged) ≥ 4
         end
+
+        # The relaxed residual tolerance (`f_abstol_factor = 256`) matters most at
+        # reduced precision: with the default `8 eps(T)` the double pendulum's
+        # residual floor is unreachable and *no* configuration converges at
+        # Float32. Guard that a robust config still converges there.
+        @testset "double pendulum converges at Float32 (relaxed f_abstol)" begin
+            @test double_pendulum_spec().f_abstol_factor == 256
+            spec = double_pendulum_spec(timespan = (0.0, 1.0), timestep = 0.01)
+            row  = run_case(spec, Float32, robust, hermite; timing = :none, quiet = true)
+            @test row.converged
+        end
     end
 end

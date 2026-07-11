@@ -7,15 +7,19 @@
 # `verbosity`, and would otherwise fire on every step of a divergent run).
 # Converging configurations need only a handful of iterations, so a modest
 # `max_iterations` cap lets divergent ones give up quickly without changing results.
-_solver_options(::Type{T}; max_iterations::Integer = 100) where {T} =
-    (min_iterations = 1, max_iterations = max_iterations, f_abstol = 8 * eps(T),
+# `f_abstol` is the absolute residual tolerance; it defaults to the integrator's
+# `8 eps(T)` but is relaxed for larger-scale problems (see `ProblemSpec`).
+_solver_options(::Type{T}; max_iterations::Integer = 100,
+                f_abstol::Real = 8 * eps(T)) where {T} =
+    (min_iterations = 1, max_iterations = max_iterations, f_abstol = f_abstol,
      verbosity = 0, warn_iterations = 0)
 
 # Build a `GeometricIntegrator` for one solver/line-search/initial-guess combination.
 # `DogLeg` and `Picard` do not accept a line search, so the keyword is omitted for them.
 function _build_integrator(prob, method, scfg::SolverConfig, iguess, ::Type{T};
-                           max_iterations::Integer = 100) where {T}
-    opts = _solver_options(T; max_iterations)
+                           max_iterations::Integer = 100,
+                           f_abstol::Real = 8 * eps(T)) where {T}
+    opts = _solver_options(T; max_iterations, f_abstol)
     if scfg.linesearch === nothing
         GeometricIntegrator(prob, method; solver = scfg.solver, initialguess = iguess, opts...)
     else
@@ -103,7 +107,8 @@ function run_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, igcfg::Initi
     try
         prob   = spec.builder(T)
         params = GIB.parameters(prob)
-        int    = _build_integrator(prob, method, scfg, igcfg.build(), T; max_iterations)
+        int    = _build_integrator(prob, method, scfg, igcfg.build(), T;
+                                   max_iterations, f_abstol = spec.f_abstol_factor * eps(T))
 
         # one representative run for the solver/accuracy metrics
         res = _drive!(int, prob)
