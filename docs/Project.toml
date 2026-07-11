@@ -8,3 +8,6 @@ SolverBenchmark = "24f6d232-d5c3-46fd-865b-836e2e992cad"
 
 [sources]
 SolverBenchmark = {path = ".."}
+
+[compat]
+PrettyTables = "3.4.0"
