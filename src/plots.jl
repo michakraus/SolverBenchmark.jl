@@ -11,12 +11,19 @@ function _ordered(values, order)
 end
 
 """
-    summary_table(df; drop_empty = true)
+    summary_table(df; panelcol = :initial_guess, panel_order = _INITIAL_GUESS_ORDER,
+                  drop_empty = true)
 
 Return a tidy copy of a benchmark `DataFrame` for display: a selection of the
-most relevant columns, sorted by precision, solver and initial guess. Columns
-that are entirely `missing` (e.g. `accuracy` for problems without an analytic
+most relevant columns, sorted by precision, solver and `panelcol`. Columns that
+are entirely `missing` (e.g. `accuracy` for problems without an analytic
 reference) are dropped when `drop_empty = true`.
+
+`panelcol` is the categorical column that distinguishes the runs beyond
+precision and solver (`:initial_guess` for the implicit-midpoint sweep,
+`:regularization` for the nonlinear-integrator sweep); `panel_order` gives its
+preferred display order (values not listed are appended in first-appearance
+order).
 """
 function summary_table(df::DataFrame; panelcol::Symbol = :initial_guess,
                        panel_order = _INITIAL_GUESS_ORDER, drop_empty::Bool = true)
@@ -64,14 +71,18 @@ function markdown_table(df::DataFrame)
 end
 
 """
-    comparison_figure(df, valcol; ylabel, yscale = identity, title = "", converged_only = false)
+    comparison_figure(df, valcol; ylabel, yscale = identity, title = "",
+                      converged_only = false, panelcol = :initial_guess,
+                      panel_order = _INITIAL_GUESS_ORDER)
 
 Build a `CairoMakie.Figure` comparing metric `valcol` across the benchmarked
-solver configurations. One panel is drawn per initial guess; within each panel
-the solver configurations are on the x-axis and the floating point precisions
-are distinguished by colour. Missing values (and, on logarithmic axes,
-non-positive values) are omitted. With `converged_only = true` only converged
-runs are shown (a missing bar/marker then means "did not converge").
+solver configurations. One panel is drawn per distinct value of `panelcol`
+(`:initial_guess` for the implicit-midpoint sweep, `:regularization` for the
+nonlinear-integrator sweep; `panel_order` gives its display order); within each
+panel the solver configurations are on the x-axis and the floating point
+precisions are distinguished by colour. Missing values (and, on logarithmic
+axes, non-positive values) are omitted. With `converged_only = true` only
+converged runs are shown (a missing bar/marker then means "did not converge").
 """
 function comparison_figure(df::DataFrame, valcol::Symbol;
                            ylabel::AbstractString = string(valcol),
@@ -171,11 +182,13 @@ plot_accuracy(df::DataFrame; title = "", kwargs...) =
     comparison_figure(df, :accuracy; ylabel = "max error vs. analytic", yscale = log10, title, kwargs...)
 
 """
-    plot_convergence(df; title = "")
+    plot_convergence(df; title = "", panelcol = :initial_guess,
+                     panel_order = _INITIAL_GUESS_ORDER)
 
-Overview of convergence across the whole grid: one panel per initial guess, with
-solver configurations on the x-axis and precisions on the y-axis. Green cells
-converged, red cells did not.
+Overview of convergence across the whole grid: one panel per distinct value of
+`panelcol` (`:initial_guess` for the implicit-midpoint sweep, `:regularization`
+for the nonlinear-integrator sweep), with solver configurations on the x-axis
+and precisions on the y-axis. Green cells converged, red cells did not.
 """
 function plot_convergence(df::DataFrame; title::AbstractString = "",
                           panelcol::Symbol = :initial_guess,
