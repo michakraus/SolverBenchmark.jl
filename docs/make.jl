@@ -17,13 +17,19 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Analyses" => [
+        "Implicit Midpoint" => [
             "Harmonic Oscillator" => "harmonic_oscillator.md",
             "Pendulum" => "pendulum.md",
             "Lotka–Volterra (2d)" => "lotka_volterra_2d.md",
             "Lotka–Volterra (4d)" => "lotka_volterra_4d.md",
             "Double Pendulum" => "double_pendulum.md",
             "Toda Lattice" => "toda_lattice.md",
+        ],
+        "Nonlinear Integrator" => [
+            "Harmonic Oscillator" => "nonlinear_harmonic_oscillator.md",
+            "Pendulum" => "nonlinear_pendulum.md",
+            "Double Pendulum" => "nonlinear_double_pendulum.md",
+            "Toda Lattice" => "nonlinear_toda_lattice.md",
         ],
         "API" => "api.md",
     ],

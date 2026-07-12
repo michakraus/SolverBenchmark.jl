@@ -3,10 +3,12 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 GeometricProblems = "18cb22b4-ad41-5c80-9c5f-710df63fbdc9"
+NonlinearIntegrators = "4ad56de4-0342-4c02-9694-ab2f23251d8c"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 SolverBenchmark = "24f6d232-d5c3-46fd-865b-836e2e992cad"
 
 [sources]
+NonlinearIntegrators = {rev = "main", url = "https://github.com/JuliaGNI/NonlinearIntegrators.jl"}
 SolverBenchmark = {path = ".."}
 
 [compat]
@@ -14,4 +16,5 @@ CairoMakie = "0.15.13"
 DataFrames = "1.8.2"
 Documenter = "1.17.0"
 GeometricProblems = "0.6.24"
+NonlinearIntegrators = "0.1"
 PrettyTables = "3.4.0"
