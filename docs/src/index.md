@@ -32,7 +32,19 @@ of nonlinear iterations per time step, the run time, the residual, and — as an
 accuracy proxy — the drift of the conserved energy (and, where available, the
 error against the analytic solution).
 
+A second experiment set uses the neural-network variational integrator
+`NonLinear_OneLayer_GML` from
+[NonlinearIntegrators.jl](https://github.com/JuliaGNI/NonlinearIntegrators.jl)
+instead of implicit midpoint. Because that integrator's nonlinear system is
+near-singular, the sweep varies the solver's **regularization factor**
+``\lambda \in \{0, 10^{-3}, 10^{-5}, 10^{-7}\}`` (in place of the initial guess)
+across the three precisions and a reduced set of four solver configurations
+(`Newton/Static`, `Newton/Backtracking`, `Newton/StrongWolfe`, `DogLeg`), at the
+step sizes ``\Delta t = 0.1, 1.0, 10.0`` (ten steps each).
+
 ## Analyses
+
+### Implicit Midpoint
 
 - [Harmonic Oscillator](@ref) — a linear problem; the solvers converge in a
   single Newton iteration.
@@ -40,6 +52,12 @@ error against the analytic solution).
 - [Lotka–Volterra (2d)](@ref) and [Lotka–Volterra (4d)](@ref) — non-canonical
   Hamiltonian systems built as `iodeproblem`s (implicit ODE / degenerate
   Lagrangian form); stiffer problems where low precision starts to fail.
+
+### Nonlinear Integrator
+
+- [Harmonic Oscillator (Nonlinear Integrator)](@ref) — the one-layer network
+  variational integrator, where a nonzero regularization factor is essential for
+  the Newton solve to converge.
 
 ## Key findings
 

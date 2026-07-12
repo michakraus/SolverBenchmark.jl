@@ -10,6 +10,8 @@ import Markdown
 using GeometricIntegrators
 using GeometricProblems
 using SimpleSolvers
+using NonlinearIntegrators
+using QuadratureRules: GaussLegendreQuadrature
 
 # `GeometricIntegratorsBase` provides the low-level stepping API
 # (`solutionstep`, `solverstate`, `current`, …) that is needed to drive the
@@ -29,14 +31,17 @@ import GeometricProblems.TodaLattice
 export ProblemSpec, harmonic_oscillator_spec, pendulum_spec
 export lotka_volterra_2d_spec, lotka_volterra_4d_spec
 export double_pendulum_spec, toda_lattice_spec
+export harmonic_oscillator_lode_spec
 
 # benchmark configuration
 export SolverConfig, InitialGuessConfig
 export default_solver_configs, default_initial_guesses, default_precisions
 export solver_label
+export nonlinear_onelayer_method, nonlinear_solver_configs, nonlinear_regularization_factors
 
 # running the benchmark
 export run_case, run_benchmark
+export run_nonlinear_case, run_nonlinear_benchmark
 
 # post-processing
 export summary_table, markdown_table
@@ -45,6 +50,7 @@ export comparison_figure, plot_convergence, plot_iterations, plot_runtime, plot_
 include("problems.jl")
 include("configurations.jl")
 include("benchmark.jl")
+include("nonlinear.jl")
 include("plots.jl")
 
 end

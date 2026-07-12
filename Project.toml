@@ -13,8 +13,10 @@ GeometricIntegratorsBase = "71212ab4-08a2-48eb-a02b-4cbad0e9c44a"
 GeometricProblems = "18cb22b4-ad41-5c80-9c5f-710df63fbdc9"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+NonlinearIntegrators = "4ad56de4-0342-4c02-9694-ab2f23251d8c"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+QuadratureRules = "a08977f5-a20d-4b99-b11f-f5ea535e0575"
 SimpleSolvers = "36b790f5-6434-4fbe-b711-1f64a1e2f6a2"
 
 [compat]
@@ -27,13 +29,21 @@ GeometricIntegratorsBase = "0.3.2"
 GeometricProblems = "0.6"
 Logging = "1"
 Markdown = "1"
+NonlinearIntegrators = "0.1"
 PrettyTables = "3.4.0"
 Printf = "1"
+QuadratureRules = "0.1"
 SimpleSolvers = "0.9"
-julia = "1.10"
+julia = "1.11"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test"]
+
+# NonlinearIntegrators is unregistered; it is resolved from its GitHub main
+# branch via this `[sources]` entry (which requires Julia 1.11+). The same entry
+# is repeated in docs/Project.toml, as it is not inherited by the docs project.
+[sources]
+NonlinearIntegrators = {url = "https://github.com/JuliaGNI/NonlinearIntegrators.jl", rev = "main"}

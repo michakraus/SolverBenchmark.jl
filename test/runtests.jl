@@ -177,4 +177,54 @@ using Test
             @test row.converged
         end
     end
+
+    @testset "NonlinearIntegrators (NonLinear_OneLayer_GML)" begin
+        @testset "configuration" begin
+            cfgs = nonlinear_solver_configs()
+            @test length(cfgs) == 4
+            @test solver_label.(cfgs) == ["Newton/Static", "Newton/Backtracking",
+                                          "Newton/StrongWolfe", "DogLeg"]
+            @test count(c -> c.linesearch === nothing, cfgs) == 1        # DogLeg
+            @test nonlinear_regularization_factors() == [0.0, 1e-3, 1e-5, 1e-7]
+        end
+
+        # short (10-step) LODE spec; a small dictionary keeps the network solves fast
+        spec    = harmonic_oscillator_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)
+        newton  = nonlinear_solver_configs()[2]                          # Newton/Backtracking
+        method  = nonlinear_onelayer_method(Float64; dict_amount = 100)
+
+        @testset "regularization is required for convergence (Float64)" begin
+            # a nonzero regularization factor is essential: the network Newton
+            # system is near-singular, so λ = 0 stalls while λ > 0 converges
+            reg0 = run_nonlinear_case(spec, Float64, newton, 0.0, method; timing = :none, quiet = true)
+            regλ = run_nonlinear_case(spec, Float64, newton, 1e-5, method; timing = :none, quiet = true)
+            @test reg0.problem == "HarmonicOscillatorLODE"
+            @test !reg0.converged
+            @test regλ.converged
+            @test regλ.iterations_mean ≥ 1
+            @test regλ.accuracy !== missing && regλ.accuracy < 1e-8      # analytic reference available
+        end
+
+        @testset "precision sweep runs and records rows" begin
+            df = run_nonlinear_benchmark(spec;
+                precisions = (Float64, Float32, Float16),
+                solver_configs = nonlinear_solver_configs()[[2, 4]],     # Newton/Backtracking, DogLeg
+                regularization_factors = [0.0, 1e-5],
+                method_builder = T -> nonlinear_onelayer_method(T; dict_amount = 100),
+                timing = :none, verbose = false, quiet = true)
+
+            @test nrow(df) == 12                                         # 3 × 2 × 2
+            @test all(in(names(df)), ["converged", "iterations_mean", "runtime_s",
+                                      "energy_drift", "accuracy", "solver_label", "regularization"])
+            # Float64 with regularization converges; Float16 fails gracefully
+            # (singular Jacobian caught and recorded as a non-converged row)
+            f64 = df[(df.precision .== "Float64") .& (df.regularization .== "λ = 1e-5"), :]
+            @test all(f64.converged)
+            f16 = df[df.precision .== "Float16", :]
+            @test nrow(f16) == 4 && !any(f16.converged)
+
+            st = summary_table(df; panelcol = :regularization)
+            @test "regularization" in names(st)
+        end
+    end
 end

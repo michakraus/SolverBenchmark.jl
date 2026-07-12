@@ -18,17 +18,18 @@ most relevant columns, sorted by precision, solver and initial guess. Columns
 that are entirely `missing` (e.g. `accuracy` for problems without an analytic
 reference) are dropped when `drop_empty = true`.
 """
-function summary_table(df::DataFrame; drop_empty::Bool = true)
-    cols = [:precision, :solver_label, :initial_guess, :converged,
+function summary_table(df::DataFrame; panelcol::Symbol = :initial_guess,
+                       panel_order = _INITIAL_GUESS_ORDER, drop_empty::Bool = true)
+    cols = [:precision, :solver_label, panelcol, :converged,
             :iterations_mean, :runtime_s, :max_residual, :energy_drift, :accuracy]
     out = select(df, intersect(cols, propertynames(df)))
 
     porder = Dict(p => i for (i, p) in enumerate(_PRECISION_ORDER))
     sorder = Dict(s => i for (i, s) in enumerate(unique(df.solver_label)))
-    gorder = Dict(g => i for (i, g) in enumerate(_ordered(df.initial_guess, _INITIAL_GUESS_ORDER)))
+    gorder = Dict(g => i for (i, g) in enumerate(_ordered(df[!, panelcol], panel_order)))
     sort!(out, [DataFrames.order(:precision, by = p -> get(porder, p, 99)),
                 DataFrames.order(:solver_label, by = s -> get(sorder, s, 99)),
-                DataFrames.order(:initial_guess, by = g -> get(gorder, g, 99))])
+                DataFrames.order(panelcol, by = g -> get(gorder, g, 99))])
 
     if drop_empty
         for c in names(out)
@@ -76,10 +77,12 @@ function comparison_figure(df::DataFrame, valcol::Symbol;
                            ylabel::AbstractString = string(valcol),
                            yscale = identity,
                            title::AbstractString = "",
-                           converged_only::Bool = false)
+                           converged_only::Bool = false,
+                           panelcol::Symbol = :initial_guess,
+                           panel_order = _INITIAL_GUESS_ORDER)
 
     # category axes come from the full grid so failing configs keep their tick
-    igs     = _ordered(df.initial_guess, _INITIAL_GUESS_ORDER)
+    igs     = _ordered(df[!, panelcol], panel_order)
     solvers = unique(df.solver_label)
     precs   = filter(p -> p in df.precision, _PRECISION_ORDER)
     converged_only && (df = df[df.converged, :])
@@ -97,7 +100,7 @@ function comparison_figure(df::DataFrame, valcol::Symbol;
             xticklabelrotation = π / 4,
             yscale = yscale)
         push!(axes, ax)
-        sub = df[df.initial_guess .== ig, :]
+        sub = df[df[!, panelcol] .== ig, :]
 
         for (pi, p) in enumerate(precs)
             xs = Float64[]; ys = Float64[]
@@ -137,26 +140,26 @@ end
 Grouped bar chart of the mean number of nonlinear-solver iterations per time step
 (converged runs only).
 """
-plot_iterations(df::DataFrame; title = "") =
+plot_iterations(df::DataFrame; title = "", kwargs...) =
     comparison_figure(df, :iterations_mean; ylabel = "mean iterations / step",
-        converged_only = true, title)
+        converged_only = true, title, kwargs...)
 
 """
     plot_runtime(df; title = "")
 
 Comparison of the integration run time (seconds, logarithmic axis; converged runs only).
 """
-plot_runtime(df::DataFrame; title = "") =
+plot_runtime(df::DataFrame; title = "", kwargs...) =
     comparison_figure(df, :runtime_s; ylabel = "runtime [s]", yscale = log10,
-        converged_only = true, title)
+        converged_only = true, title, kwargs...)
 
 """
     plot_energy_drift(df; title = "")
 
 Comparison of the energy (invariant) drift `|H(t_end) - H(t_0)|` (logarithmic axis).
 """
-plot_energy_drift(df::DataFrame; title = "") =
-    comparison_figure(df, :energy_drift; ylabel = "energy drift", yscale = log10, title)
+plot_energy_drift(df::DataFrame; title = "", kwargs...) =
+    comparison_figure(df, :energy_drift; ylabel = "energy drift", yscale = log10, title, kwargs...)
 
 """
     plot_accuracy(df; title = "")
@@ -164,8 +167,8 @@ plot_energy_drift(df::DataFrame; title = "") =
 Comparison of the maximum error against the analytic solution (logarithmic axis).
 Only meaningful for problems that provide a reference solution.
 """
-plot_accuracy(df::DataFrame; title = "") =
-    comparison_figure(df, :accuracy; ylabel = "max error vs. analytic", yscale = log10, title)
+plot_accuracy(df::DataFrame; title = "", kwargs...) =
+    comparison_figure(df, :accuracy; ylabel = "max error vs. analytic", yscale = log10, title, kwargs...)
 
 """
     plot_convergence(df; title = "")
@@ -174,8 +177,10 @@ Overview of convergence across the whole grid: one panel per initial guess, with
 solver configurations on the x-axis and precisions on the y-axis. Green cells
 converged, red cells did not.
 """
-function plot_convergence(df::DataFrame; title::AbstractString = "")
-    igs     = _ordered(df.initial_guess, _INITIAL_GUESS_ORDER)
+function plot_convergence(df::DataFrame; title::AbstractString = "",
+                          panelcol::Symbol = :initial_guess,
+                          panel_order = _INITIAL_GUESS_ORDER)
+    igs     = _ordered(df[!, panelcol], panel_order)
     solvers = unique(df.solver_label)
     precs   = filter(p -> p in df.precision, _PRECISION_ORDER)
 
@@ -186,7 +191,7 @@ function plot_convergence(df::DataFrame; title::AbstractString = "")
             xticks = (1:length(solvers), solvers),
             xticklabelrotation = π / 4,
             yticks = (1:length(precs), precs))
-        sub = df[df.initial_guess .== ig, :]
+        sub = df[df[!, panelcol] .== ig, :]
         M = fill(NaN, length(solvers), length(precs))
         for (si, s) in enumerate(solvers), (pj, p) in enumerate(precs)
             r = sub[(sub.solver_label .== s) .& (sub.precision .== p), :]
