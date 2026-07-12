@@ -11,4 +11,5 @@ SolverBenchmark = {path = ".."}
 
 [compat]
 CairoMakie = "0.15.13"
+GeometricProblems = "0.6.24"
 PrettyTables = "3.4.0"
