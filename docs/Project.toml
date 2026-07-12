@@ -10,4 +10,5 @@ SolverBenchmark = "24f6d232-d5c3-46fd-865b-836e2e992cad"
 SolverBenchmark = {path = ".."}
 
 [compat]
+GeometricProblems = "0.6.24"
 PrettyTables = "3.4.0"
