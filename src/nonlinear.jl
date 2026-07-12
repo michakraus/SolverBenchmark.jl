@@ -47,6 +47,70 @@ function harmonic_oscillator_lode_spec(; q₀ = [0.5], p₀ = [0.0], timespan = 
 end
 
 """
+    pendulum_lode_spec(; timespan = (0.0, 1.0), timestep = 0.1)
+
+Return a [`ProblemSpec`](@ref) for the mathematical pendulum from
+`GeometricProblems.Pendulum`. The pendulum has no Lagrangian (`lodeproblem`) form
+in `GeometricProblems`, so its **`iodeproblem`** — a two-dimensional phase-space
+form whose state is `q = [angle, momentum]` — is used (the network integrator
+accepts any `AbstractProblemIODE`). The nonlinearity exercises the solvers more
+than the harmonic oscillator. No closed-form solution is used; accuracy is
+assessed through the energy drift `H(q) = H(angle, momentum)`, evaluated from the
+two components of the state `q`.
+"""
+function pendulum_lode_spec(; timespan = (0.0, 1.0), timestep = 0.1)
+    builder = T -> Pendulum.iodeproblem(T.(Pendulum.x₀), T.(Pendulum.p₀_iode), T;
+        timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep))
+
+    # the iode state bundles both position and momentum into q = [angle, momentum]
+    energy = (t, q, p, params) -> Pendulum.hamiltonian(t, q[1], q[2], params)
+
+    ProblemSpec("PendulumLODE", builder, energy, nothing; f_abstol_factor = 256)
+end
+
+"""
+    double_pendulum_lode_spec(; timespan = (0.0, 1.0), timestep = 0.1)
+
+Return a [`ProblemSpec`](@ref) for the double pendulum from
+`GeometricProblems.DoublePendulum`, built as a two-dimensional **`lodeproblem`**.
+This is a chaotic, strongly nonlinear system, so it exercises the network solve
+hard. Its Hamiltonian depends on both `q` and `p`; the energy proxy is evaluated
+from the full `(q, p)` state. No closed-form solution exists.
+"""
+function double_pendulum_lode_spec(; timespan = (0.0, 1.0), timestep = 0.1)
+    builder = T -> DoublePendulum.lodeproblem(T.(DoublePendulum.θ₀), T.(DoublePendulum.p₀);
+        timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
+        parameters = _typed_parameters(T, DoublePendulum.default_parameters))
+
+    energy = (t, q, p, params) -> DoublePendulum.hamiltonian(t, q, p, params)
+
+    ProblemSpec("DoublePendulumLODE", builder, energy, nothing; f_abstol_factor = 256)
+end
+
+"""
+    toda_lattice_lode_spec(; N = 16, μ = 0.3, timespan = (0.0, 1.0), timestep = 0.1)
+
+Return a [`ProblemSpec`](@ref) for the Toda lattice from
+`GeometricProblems.TodaLattice`, built as an `N`-dimensional **`lodeproblem`**
+(`N = 16` sites, so the network integrator solves a 16-dimensional implicit
+system per step). Its Hamiltonian `H(t, q, p, N)` depends on both `q` and `p`
+(and on `N`, which the energy closure captures). No closed-form solution exists.
+"""
+function toda_lattice_lode_spec(; N = 16, μ = 0.3, timespan = (0.0, 1.0), timestep = 0.1)
+    builder = function (T)
+        q₀ = T.(TodaLattice.compute_initial_q(μ, N))
+        p₀ = zero(q₀)
+        TodaLattice.lodeproblem(N, q₀, p₀;
+            timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
+            parameters = _typed_parameters(T, TodaLattice.default_parameters))
+    end
+
+    energy = (t, q, p, params) -> TodaLattice.hamiltonian(t, q, p, params, N)
+
+    ProblemSpec("TodaLatticeLODE", builder, energy, nothing; f_abstol_factor = 256)
+end
+
+"""
     nonlinear_onelayer_method(T; R = 8, S = 4, k = 3, bias_interval = [-π, π],
                               dict_amount = NONLINEAR_DICT_AMOUNT)
 

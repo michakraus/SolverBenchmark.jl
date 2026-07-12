@@ -27,6 +27,9 @@ makedocs(;
         ],
         "Nonlinear Integrator" => [
             "Harmonic Oscillator" => "nonlinear_harmonic_oscillator.md",
+            "Pendulum" => "nonlinear_pendulum.md",
+            "Double Pendulum" => "nonlinear_double_pendulum.md",
+            "Toda Lattice" => "nonlinear_toda_lattice.md",
         ],
         "API" => "api.md",
     ],

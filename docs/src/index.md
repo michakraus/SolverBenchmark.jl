@@ -58,6 +58,15 @@ step sizes ``\Delta t = 0.1, 1.0, 10.0`` (ten steps each).
 - [Harmonic Oscillator (Nonlinear Integrator)](@ref) — the one-layer network
   variational integrator, where a nonzero regularization factor is essential for
   the Newton solve to converge.
+- [Pendulum (Nonlinear Integrator)](@ref) — a nonlinear problem (built from the
+  pendulum's phase-space `iodeproblem`).
+- [Double Pendulum (Nonlinear Integrator)](@ref) — a chaotic, strongly nonlinear
+  system; `DogLeg` is the most robust solver here.
+- [Toda Lattice (Nonlinear Integrator)](@ref) — a 16-dimensional lattice, the
+  highest-dimensional problem in the study.
+
+The Lotka–Volterra systems are omitted from the nonlinear-integrator study: their
+degenerate Lagrangians are not currently supported by `NonLinear_OneLayer_GML`.
 
 ## Key findings
 

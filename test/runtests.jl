@@ -226,5 +226,22 @@ using Test
             st = summary_table(df; panelcol = :regularization)
             @test "regularization" in names(st)
         end
+
+        # the other problems in the study (Lotka–Volterra is excluded — its
+        # degenerate Lagrangian is unsupported). The pendulum uses its 2d
+        # phase-space iodeproblem; the others use lodeproblems (D = 2 and D = 16).
+        # The same (problem-agnostic) network `method` is reused for all of them.
+        @testset "$name converges with regularization (Float64)" for (name, mk) in
+                (("PendulumLODE",       pendulum_lode_spec),
+                 ("DoublePendulumLODE", double_pendulum_lode_spec),
+                 ("TodaLatticeLODE",    toda_lattice_lode_spec))
+            s   = mk(timespan = (0.0, 1.0), timestep = 0.1)
+            row = run_nonlinear_case(s, Float64, newton, 1e-3, method; timing = :none, quiet = true)
+            @test row.problem == name
+            @test row.converged
+            @test row.iterations_mean ≥ 1
+            @test row.energy_drift !== missing      # energy proxy needs q and p
+            @test row.accuracy === missing          # no analytic reference
+        end
     end
 end

@@ -31,7 +31,8 @@ import GeometricProblems.TodaLattice
 export ProblemSpec, harmonic_oscillator_spec, pendulum_spec
 export lotka_volterra_2d_spec, lotka_volterra_4d_spec
 export double_pendulum_spec, toda_lattice_spec
-export harmonic_oscillator_lode_spec
+export harmonic_oscillator_lode_spec, pendulum_lode_spec
+export double_pendulum_lode_spec, toda_lattice_lode_spec
 
 # benchmark configuration
 export SolverConfig, InitialGuessConfig
