@@ -11,4 +11,5 @@ SolverBenchmark = {path = ".."}
 
 [compat]
 CairoMakie = "0.15.13"
+Documenter = "1.17.0"
 PrettyTables = "3.4.0"
