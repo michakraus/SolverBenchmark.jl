@@ -15,6 +15,6 @@ SolverBenchmark = {path = ".."}
 CairoMakie = "0.15.13"
 DataFrames = "1.8.2"
 Documenter = "1.17.0"
-GeometricProblems = "0.6.24"
+GeometricProblems = "0.7.0"
 NonlinearIntegrators = "0.1"
 PrettyTables = "3.4.0"

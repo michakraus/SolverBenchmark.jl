@@ -30,7 +30,7 @@ default `8 eps(T)` even a well-solved step is reported as non-converged at
 `Float32`.
 """
 function harmonic_oscillator_lode_spec(; q₀ = [0.5], p₀ = [0.0], timespan = (0.0, 1.0), timestep = 0.1)
-    builder = T -> HarmonicOscillator.lodeproblem(T.(q₀), T.(p₀), T;
+    builder = T -> HarmonicOscillator.lodeproblem(T.(q₀), T.(p₀);
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
         parameters = HarmonicOscillator.default_parameters(T))
 
@@ -59,8 +59,9 @@ assessed through the energy drift `H(q) = H(angle, momentum)`, evaluated from th
 two components of the state `q`.
 """
 function pendulum_lode_spec(; timespan = (0.0, 1.0), timestep = 0.1)
-    builder = T -> Pendulum.iodeproblem(T.(Pendulum.x₀), T.(Pendulum.p₀_iode), T;
-        timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep))
+    builder = T -> Pendulum.iodeproblem(T.(Pendulum.x₀), T.(Pendulum.p₀_iode);
+        timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
+        parameters = Pendulum.default_parameters(T))
 
     # the iode state bundles both position and momentum into q = [angle, momentum]
     energy = (t, q, p, params) -> Pendulum.hamiltonian(t, q[1], q[2], params)
@@ -80,7 +81,7 @@ from the full `(q, p)` state. No closed-form solution exists.
 function double_pendulum_lode_spec(; timespan = (0.0, 1.0), timestep = 0.1)
     builder = T -> DoublePendulum.lodeproblem(T.(DoublePendulum.θ₀), T.(DoublePendulum.p₀);
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
-        parameters = _typed_parameters(T, DoublePendulum.default_parameters))
+        parameters = DoublePendulum.default_parameters(T))
 
     energy = (t, q, p, params) -> DoublePendulum.hamiltonian(t, q, p, params)
 
@@ -102,7 +103,7 @@ function toda_lattice_lode_spec(; N = 16, μ = 0.3, timespan = (0.0, 1.0), times
         p₀ = zero(q₀)
         TodaLattice.lodeproblem(N, q₀, p₀;
             timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
-            parameters = _typed_parameters(T, TodaLattice.default_parameters))
+            parameters = TodaLattice.default_parameters(T))
     end
 
     energy = (t, q, p, params) -> TodaLattice.hamiltonian(t, q, p, params, N)

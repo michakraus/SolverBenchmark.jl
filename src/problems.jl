@@ -77,10 +77,6 @@ function pendulum_spec(; x₀ = [acos(0.4), 0.0], timespan = (0.0, 100.0), times
     ProblemSpec("Pendulum", builder, energy, nothing)
 end
 
-# Convert a parameter NamedTuple to element type `T` so the whole problem
-# (state and parameters) is integrated consistently at the requested precision.
-_typed_parameters(::Type{T}, nt::NamedTuple) where {T} = NamedTuple{keys(nt)}(map(T, values(nt)))
-
 """
     lotka_volterra_2d_spec(; q₀ = [2.0, 1.0], timespan = (0.0, 10.0), timestep = 0.01)
 
@@ -97,7 +93,7 @@ for this stiffer system.
 function lotka_volterra_2d_spec(; q₀ = [2.0, 1.0], timespan = (0.0, 10.0), timestep = 0.01)
     builder = T -> LotkaVolterra2d.iodeproblem(T.(q₀);
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
-        parameters = _typed_parameters(T, LotkaVolterra2d.default_parameters))
+        parameters = LotkaVolterra2d.default_parameters(T))
 
     energy = (t, q, p, params) -> LotkaVolterra2d.hamiltonian(t, q, params)
 
@@ -119,7 +115,7 @@ Uses the native `(0, 10)` time span with `Δt = 0.01`.
 function lotka_volterra_4d_spec(; q₀ = [2.0, 1.0, 1.0, 1.0], timespan = (0.0, 10.0), timestep = 0.01)
     builder = T -> LotkaVolterra4d.iodeproblem(T.(q₀);
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
-        parameters = _typed_parameters(T, LotkaVolterra4d.default_parameters))
+        parameters = LotkaVolterra4d.default_parameters(T))
 
     energy = (t, q, p, params) -> LotkaVolterra4d.hamiltonian(t, q, params)
 
@@ -152,7 +148,7 @@ function double_pendulum_spec(; q₀ = DoublePendulum.θ₀, p₀ = DoublePendul
                                 timespan = (0.0, 10.0), timestep = 0.01)
     builder = T -> DoublePendulum.hodeproblem(T.(q₀), T.(p₀);
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
-        parameters = _typed_parameters(T, DoublePendulum.default_parameters))
+        parameters = DoublePendulum.default_parameters(T))
 
     energy = (t, q, p, params) -> DoublePendulum.hamiltonian(t, q, p, params)
 
@@ -184,7 +180,7 @@ function toda_lattice_spec(; N = 16, μ = 0.3, timespan = (0.0, 100.0), timestep
         p₀ = zero(q₀)
         TodaLattice.hodeproblem(N, q₀, p₀;
             timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
-            parameters = _typed_parameters(T, TodaLattice.default_parameters))
+            parameters = TodaLattice.default_parameters(T))
     end
 
     energy = (t, q, p, params) -> TodaLattice.hamiltonian(t, q, p, params, N)
