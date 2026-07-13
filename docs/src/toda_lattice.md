@@ -9,7 +9,7 @@ momenta. The Hamiltonian ``H(t, q, p)`` depends on both the coordinates and the
 momenta, so the energy-drift proxy is evaluated from the full ``(q, p)`` state.
 
 The benchmark below is regenerated at documentation build time with a single,
-fast timing pass. See the driver script `scripts/toda_lattice.jl` for accurate
+fast timing pass. See the driver script `scripts/midpoint_toda_lattice.jl` for accurate
 `BenchmarkTools` measurements. The results are shown first for the standard step
 ``\Delta t = 0.1`` and then repeated for a coarse step ``\Delta t = 1.0`` (see
 [Coarse time step (Δt = 1.0)](@ref toda_lattice_dt1)).

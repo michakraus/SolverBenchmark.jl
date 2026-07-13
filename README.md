@@ -39,8 +39,15 @@ writes the raw results to `results/<problem>.csv`, prints a summary table, and
 saves the comparison figures to `results/`:
 
 ```sh
-julia --project=. scripts/harmonic_oscillator.jl
-julia --project=. scripts/pendulum.jl
+julia --project=. scripts/midpoint_harmonic_oscillator.jl
+julia --project=. scripts/midpoint_pendulum.jl
+```
+
+To regenerate every benchmark in the documentation — both the implicit-midpoint
+and the nonlinear-integrator experiment sets — run:
+
+```sh
+julia --project=. scripts/run_all.jl
 ```
 
 Or assemble a benchmark programmatically:

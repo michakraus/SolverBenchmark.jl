@@ -1,7 +1,7 @@
 # Shared driver for a single benchmark analysis.
 #
 # Run one of the problem scripts (which `include` this file), e.g.
-#     julia --project=. scripts/harmonic_oscillator.jl
+#     julia --project=. scripts/midpoint_harmonic_oscillator.jl
 # Each analysis runs the full benchmark grid with accurate `BenchmarkTools`
 # timing, writes the raw results to `results/<problem>.csv`, prints a summary
 # table, and saves the comparison figures to `results/`.

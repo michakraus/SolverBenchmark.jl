@@ -95,8 +95,8 @@ measurements, run the driver scripts, which use `BenchmarkTools` and also write
 the raw results to `results/`:
 
 ```julia
-julia --project=. scripts/harmonic_oscillator.jl
-julia --project=. scripts/pendulum.jl
+julia --project=. scripts/midpoint_harmonic_oscillator.jl
+julia --project=. scripts/midpoint_pendulum.jl
 ```
 
 See the [API](@ref) for the building blocks used to define new problems and

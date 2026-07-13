@@ -10,7 +10,7 @@ ten times coarser step ``\Delta t = 0.1`` (see
 [Coarse time step (Δt = 0.1)](@ref lotka_volterra_2d_dt01)).
 
 The benchmark below is regenerated at documentation build time with a single, fast
-timing pass. See the driver script `scripts/lotka_volterra_2d.jl` for accurate
+timing pass. See the driver script `scripts/midpoint_lotka_volterra_2d.jl` for accurate
 `BenchmarkTools` measurements.
 
 ```@example lv2

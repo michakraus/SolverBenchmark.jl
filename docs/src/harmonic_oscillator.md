@@ -7,7 +7,7 @@ solver configurations are dominated by convergence behaviour and floating point
 precision rather than by nonlinearity.
 
 The benchmark below is regenerated at documentation build time with a single,
-fast timing pass. See the driver script `scripts/harmonic_oscillator.jl` for
+fast timing pass. See the driver script `scripts/midpoint_harmonic_oscillator.jl` for
 accurate `BenchmarkTools` measurements. The results are shown first for the
 standard step ``\Delta t = 0.1`` and then repeated for a coarse step
 ``\Delta t = 1.0`` (see [Coarse time step (Δt = 1.0)](@ref harmonic_oscillator_dt1)).

@@ -7,7 +7,7 @@ the Hamiltonian ``H(t, q, p)`` depends on both the coordinates ``q`` and the
 momenta ``p``, the energy-drift proxy is evaluated from the full ``(q, p)`` state.
 
 The benchmark below is regenerated at documentation build time with a single,
-fast timing pass. See the driver script `scripts/double_pendulum.jl` for accurate
+fast timing pass. See the driver script `scripts/midpoint_double_pendulum.jl` for accurate
 `BenchmarkTools` measurements. The results are shown first for the standard step
 ``\Delta t = 0.01`` and then repeated for a coarse step ``\Delta t = 0.1`` (see
 [Coarse time step (Δt = 0.1)](@ref double_pendulum_dt01)).
