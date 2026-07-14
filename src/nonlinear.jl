@@ -111,32 +111,81 @@ function toda_lattice_lode_spec(; N = 16, μ = 0.3, timespan = (0.0, 1.0), times
     ProblemSpec("TodaLatticeLODE", builder, energy, nothing; f_abstol_factor = 256)
 end
 
+# Precision-generic activation factories for the one-layer network. Each is safe
+# simultaneously for Float16/Float32/Float64, ForwardDiff.Dual (the Newton
+# Jacobian) and Symbolics.Num (the SymbolicNeuralNetwork built at construction),
+# so constants are materialised through the argument with `zero`/`one`/`oftype`
+# rather than hardcoded as Float64 literals.
+
+"""
+    relu_k(k)
+
+Return the rectified-power activation `x -> max(0, x)^k` (the benchmark's default,
+with `k = 3`). This is the ridge activation OGA's ±1-weight dictionary is built
+for; see [`gelu`](@ref)/[`elu`](@ref) for smooth alternatives.
+"""
+relu_k(k::Integer) = x -> max(zero(x), x)^k
+
+"""
+    gelu(x)
+
+Gaussian Error Linear Unit, tanh approximation
+`0.5 x (1 + tanh(√(2/π) (x + 0.044715 x³)))`. Smooth (C∞) and branch-free, so it
+traces cleanly through the symbolic-derivative path.
+"""
+function gelu(x)
+    c = sqrt(oftype(x, 2) / oftype(x, π))
+    a = oftype(x, 0.044715)
+    return oftype(x, 0.5) * x * (one(x) + tanh(c * (x + a * x^3)))
+end
+
+"""
+    elu(x)
+
+Exponential Linear Unit with `α = 1`: `x` for `x > 0`, `exp(x) - 1` otherwise.
+C¹ (both branch derivatives are `1` at the origin). The branch is written with
+`ifelse` so it does not force a `Bool` on the symbolic path.
+"""
+elu(x) = ifelse(x > zero(x), x, exp(x) - one(x))
+
 """
     nonlinear_onelayer_method(T; R = 8, S = 4, k = 3, bias_interval = [-π, π],
-                              dict_amount = NONLINEAR_DICT_AMOUNT)
+                              dict_amount = NONLINEAR_DICT_AMOUNT,
+                              activation = relu_k(k),
+                              initial_guess_method = OGA1d_Legacy())
 
 Construct a `NonLinear_OneLayer_GML` integrator at precision `T`: a one-layer
-network with `S` neurons and activation `x -> max(0, x)^k`, integrated with an
-`R`-point Gauss–Legendre quadrature. The network basis and the quadrature are
-both built at `T` (the constructor requires them to share the element type), so
-the integration runs genuinely at the requested precision.
+network with `S` neurons and the given `activation` (default `x -> max(0, x)^k`,
+i.e. [`relu_k`](@ref)), integrated with an `R`-point Gauss–Legendre quadrature.
+The network basis and the quadrature are both built at `T` (the constructor
+requires them to share the element type), so the integration runs genuinely at
+the requested precision.
+
+`initial_guess_method` selects the network's built-in seed; it defaults to the
+validated `OGA1d_Legacy()` (see below). The activation-study script overrides both
+`activation` and `initial_guess_method` (with `OGA1d()`) to compare smooth
+activations against the ReLU baseline; the `k` keyword is used only by the default
+`relu_k(k)` and is ignored when an explicit `activation` is passed.
 """
 function nonlinear_onelayer_method(::Type{T}; R = 8, S = 4, k = 3,
                                    bias_interval = [-π, π],
-                                   dict_amount = NONLINEAR_DICT_AMOUNT) where {T}
-    activation = x -> max(zero(x), x)^k
+                                   dict_amount = NONLINEAR_DICT_AMOUNT,
+                                   activation = relu_k(k),
+                                   initial_guess_method = OGA1d_Legacy()) where {T}
     network    = OneLayerNetwork_GML{T}(activation, S)
     quadrature = GaussLegendreQuadrature(T, R)
-    # Seed the network solve with the Float64-island OGA (`OGA1d_Legacy`), the
-    # variant this benchmark was validated against. NonlinearIntegrators' current
-    # default `OGA1d` is a newer working-precision QR seed that regresses these
-    # problems — the double pendulum solve stalls at a residual of ~0.18 for every
-    # dictionary size, and at Float16 it returns a finite-but-poor seed that slips
-    # under the relaxed tolerance instead of the expected singular failure. Pin the
-    # legacy seed so the reported solver/regularization behaviour stays meaningful.
+    # The default seeds the network solve with the Float64-island OGA
+    # (`OGA1d_Legacy`), the variant this benchmark was validated against.
+    # NonlinearIntegrators' current default `OGA1d` is a newer working-precision QR
+    # seed that regresses these problems with the ReLU activation — the double
+    # pendulum solve stalls at a residual of ~0.18 for every dictionary size, and
+    # at Float16 it returns a finite-but-poor seed that slips under the relaxed
+    # tolerance instead of the expected singular failure. Keep the legacy seed as
+    # the default so the production benchmark stays meaningful; the activation study
+    # passes `OGA1d()` explicitly (it pairs better with smooth activations).
     NonLinear_OneLayer_GML(network, quadrature;
         bias_interval = T.(bias_interval), dict_amount = dict_amount,
-        initial_guess_method = OGA1d_Legacy())
+        initial_guess_method = initial_guess_method)
 end
 
 """

@@ -39,6 +39,7 @@ export SolverConfig, InitialGuessConfig
 export default_solver_configs, default_initial_guesses, default_precisions
 export solver_label
 export nonlinear_onelayer_method, nonlinear_solver_configs, nonlinear_regularization_factors
+export relu_k, gelu, elu
 
 # running the benchmark
 export run_case, run_benchmark
