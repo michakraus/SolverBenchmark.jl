@@ -45,6 +45,7 @@ function _drive!(int, prob)
 
     N = ntime(sol)
     for n in 1:N
+        reset!(solstep, timesteps(sol)[n])
         integrate!(solstep, int)
         copy!(sol, curstate, n)
 

@@ -127,8 +127,16 @@ function nonlinear_onelayer_method(::Type{T}; R = 8, S = 4, k = 3,
     activation = x -> max(zero(x), x)^k
     network    = OneLayerNetwork_GML{T}(activation, S)
     quadrature = GaussLegendreQuadrature(T, R)
+    # Seed the network solve with the Float64-island OGA (`OGA1d_Legacy`), the
+    # variant this benchmark was validated against. NonlinearIntegrators' current
+    # default `OGA1d` is a newer working-precision QR seed that regresses these
+    # problems — the double pendulum solve stalls at a residual of ~0.18 for every
+    # dictionary size, and at Float16 it returns a finite-but-poor seed that slips
+    # under the relaxed tolerance instead of the expected singular failure. Pin the
+    # legacy seed so the reported solver/regularization behaviour stays meaningful.
     NonLinear_OneLayer_GML(network, quadrature;
-        bias_interval = T.(bias_interval), dict_amount = dict_amount)
+        bias_interval = T.(bias_interval), dict_amount = dict_amount,
+        initial_guess_method = OGA1d_Legacy())
 end
 
 """

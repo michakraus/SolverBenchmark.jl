@@ -19,13 +19,19 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 QuadratureRules = "a08977f5-a20d-4b99-b11f-f5ea535e0575"
 SimpleSolvers = "36b790f5-6434-4fbe-b711-1f64a1e2f6a2"
 
+# NonlinearIntegrators is unregistered; it is resolved from its GitHub main
+# branch via this `[sources]` entry (which requires Julia 1.11+). The same entry
+# is repeated in docs/Project.toml, as it is not inherited by the docs project.
+[sources]
+NonlinearIntegrators = {url = "https://github.com/JuliaGNI/NonlinearIntegrators.jl", rev = "main"}
+
 [compat]
 BenchmarkTools = "1.8.0"
 CSV = "0.10.16"
 CairoMakie = "0.15.13"
 DataFrames = "1.8.2"
 GeometricIntegrators = "0.16"
-GeometricIntegratorsBase = "0.3.2"
+GeometricIntegratorsBase = "0.4.0"
 GeometricProblems = "0.7"
 Logging = "1"
 Markdown = "1"
@@ -41,9 +47,3 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test"]
-
-# NonlinearIntegrators is unregistered; it is resolved from its GitHub main
-# branch via this `[sources]` entry (which requires Julia 1.11+). The same entry
-# is repeated in docs/Project.toml, as it is not inherited by the docs project.
-[sources]
-NonlinearIntegrators = {url = "https://github.com/JuliaGNI/NonlinearIntegrators.jl", rev = "main"}
