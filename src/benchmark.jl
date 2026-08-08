@@ -1,3 +1,9 @@
+# Number of consecutive non-moving steps after which a solve is declared stalled.
+# SimpleSolvers defaults to 2, which the near-singular network solves of
+# `src/nonlinear.jl` trip while still making progress; 5 gives them room without
+# letting a genuinely stuck solve run to `max_iterations`.
+const MAX_STALLS = 5
+
 # Solver options passed to the integrator, merged over `default_options(method,
 # problem)` — so only what the harness changes is listed:
 #  - `verbosity`/`warn_iterations`: the harness records (non-)convergence itself, so
@@ -12,7 +18,7 @@
 #    (see `ProblemSpec`).
 _solver_options(::Type{T}; max_iterations::Integer = 100,
                 f_abstol::Real = 8 * eps(T)) where {T} =
-    (max_iterations = max_iterations, f_abstol = f_abstol,
+    (max_iterations = max_iterations, f_abstol = f_abstol, max_stalls = MAX_STALLS,
      verbosity = 0, warn_iterations = 0)
 
 # `_solver_options` silences everything the *benchmarked* solver emits. Two
