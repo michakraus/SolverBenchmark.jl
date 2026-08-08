@@ -57,8 +57,8 @@ plot_energy_drift(df)
   converge in about 2 iterations per step** at `Float32`/`Float64`.
 - **`Picard` never converges** on this system — unlike the harmonic oscillator and
   pendulum (where it converged, if slowly), the fixed-point iteration diverges on
-  the non-canonical `iodeproblem` formulation. The `Quadratic` and
-  `BierlaireQuadratic` line searches also fail throughout.
+  the non-canonical `iodeproblem` formulation. It is the *only* solver that fails
+  at `Float32`/`Float64`: every other configuration converges at both precisions.
 - **`Float16` largely fails** (only a handful of runs converge): the Newton
   linear solve hits singular Jacobians and the trajectory diverges. `Float32` and
   `Float64` behave essentially identically here — the achievable step accuracy is
@@ -76,8 +76,8 @@ markdown_table(summary_table(df))
 
 The same benchmark over ``(0, 10)`` with a ten times larger step. The problem
 becomes harder: the converging solvers need more iterations (≈ 3 per step instead
-of ≈ 2), while the same configurations continue to fail (`Picard`, `Quadratic`,
-`BierlaireQuadratic`, and most of `Float16`).
+of ≈ 2), while the same configurations continue to fail (`Picard`, and much of
+`Float16`).
 
 ```@example lv2
 spec1 = lotka_volterra_2d_spec(timespan = (0.0, 10.0), timestep = 0.1)

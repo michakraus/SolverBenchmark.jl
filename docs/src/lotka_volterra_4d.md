@@ -54,8 +54,8 @@ plot_energy_drift(df)
 
 - As for the 2d system, **`Newton` (robust line search) and `DogLeg` converge in
   about 2 iterations per step** at `Float32`/`Float64` (slightly more than the 2d
-  case, ≈ 2.3), while **`Picard` never converges** and the `Quadratic` /
-  `BierlaireQuadratic` line searches fail throughout.
+  case, ≈ 2.3), while **`Picard` never converges**. As for the 2d system, `Picard`
+  is the only failure at `Float32`/`Float64`.
 - The stronger degeneracy makes **`Float16` fail even more readily** — the Newton
   linear solve raises a singular-Jacobian error for most configurations. `Float32`
   and `Float64` again give essentially the same convergence pattern.

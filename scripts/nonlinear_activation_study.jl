@@ -1,10 +1,10 @@
 # Activation & seed study for the NonLinear_OneLayer_GML integrator.
 #
-# Motivation: the ReLU^k activation interacts badly with Float16 (Newton Jacobian
-# hits a SingularException), and a prior GELU attempt with the OGA1d_Legacy seed
-# regressed even Float64. The hypothesis tested here is that the working-precision
-# QR seed `OGA1d` pairs well with smooth activations, so ELU/GELU + OGA1d should
-# fix Float16 without regressing Float64.
+# Question: the production default, ReLU^k with the `OGA1d_Legacy` seed, fails at
+# Float16 (the Newton Jacobian hits a SingularException). Does the
+# working-precision QR seed `OGA1d`, paired with a smooth activation, fix Float16
+# without giving up Float64 accuracy? The matrix below answers it by varying seed
+# and activation independently.
 #
 # This is a standalone study: it injects `activation` / `initial_guess_method` into
 # `nonlinear_onelayer_method` via the `method_builder` hook and does NOT change the
@@ -39,7 +39,7 @@ const ACTIVATION_MATRIX = [
 ]
 
 # Fast, decisive slice: HO has an analytic reference (accuracy populated — the
-# clearest Float16 signal); the double pendulum is where OGA1d previously regressed.
+# clearest Float16 signal); the double pendulum is where OGA1d regresses hardest.
 activation_study_specs() = [
     harmonic_oscillator_lode_spec(; timestep = 0.1, timespan = (0.0, 1.0)),
     double_pendulum_lode_spec(;    timestep = 0.1, timespan = (0.0, 1.0)),

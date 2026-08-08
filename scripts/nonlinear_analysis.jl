@@ -1,5 +1,5 @@
 # Shared driver for a single nonlinear-integrator benchmark analysis
-# (NonLinear_OneLayer_GML). Mirrors `analysis.jl` but sweeps the solver
+# (NonLinear_OneLayer_GML). Mirrors `midpoint_analysis.jl` but sweeps the solver
 # `regularization_factor` in place of the initial guess, so the figures and the
 # summary table panel by `:regularization`.
 #

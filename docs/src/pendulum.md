@@ -55,8 +55,9 @@ plot_energy_drift(df)
   `Backtracking`, `Bisection`, `StrongWolfe`) and `DogLeg` again behave almost
   identically, so in this mildly nonlinear regime the line search barely affects
   the iteration count.
-- **`Newton/Quadratic` never converges** on the pendulum — the quadratic line
-  search is not robust here.
+- **Every configuration converges** — all 72 runs. `Newton/Quadratic`, which used
+  to fail on the pendulum at every precision, converges throughout since
+  SimpleSolvers 0.10.
 - **`Picard`** needs roughly 8 iterations per step and is, as for the harmonic
   oscillator, the most sensitive to the initial guess
   (`MidpointExtrapolation` fewest, `NoInitialGuess` most).
@@ -72,8 +73,8 @@ markdown_table(summary_table(df))
 
 With a ten times larger step the equations become more strongly nonlinear, which
 stresses the solvers noticeably more than the ``\Delta t = 0.1`` results above:
-Newton's iteration count rises to ≈ 3.3 per step, `Picard` needs ≈ 30, and
-`Newton/BierlaireQuadratic` also stops converging.
+Newton's iteration count rises to ≈ 3.3 per step and `Picard` needs ≈ 30. Every
+configuration still converges.
 
 ```@example pendulum
 spec1 = pendulum_spec(timespan = (0.0, 100.0), timestep = 1.0)

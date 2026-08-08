@@ -12,9 +12,11 @@ inside the implicit integrators of
 applied to example problems from
 [GeometricProblems.jl](https://github.com/JuliaGNI/GeometricProblems.jl).
 
-Each problem is integrated with the **implicit midpoint** method over the time
-interval ``(0, 100)`` with a step size of ``0.1``, and the following options are
-swept:
+Each problem is integrated with the **implicit midpoint** method, over the time
+span and step size that suit it (``(0, 100)`` at ``\Delta t = 0.1`` for the
+oscillator, pendulum and Toda lattice; ``(0, 10)`` at ``\Delta t = 0.01`` for the
+stiffer Lotka–Volterra and double-pendulum systems), and each is also run at a ten
+times coarser step. The following options are swept:
 
 | Dimension | Values |
 |:----------|:-------|
@@ -52,6 +54,10 @@ step sizes ``\Delta t = 0.1, 1.0, 10.0`` (ten steps each).
 - [Lotka–Volterra (2d)](@ref) and [Lotka–Volterra (4d)](@ref) — non-canonical
   Hamiltonian systems built as `iodeproblem`s (implicit ODE / degenerate
   Lagrangian form); stiffer problems where low precision starts to fail.
+- [Double Pendulum](@ref) — a chaotic `hodeproblem` (canonical Hamiltonian form)
+  whose Hamiltonian depends on both `q` and `p`.
+- [Toda Lattice](@ref) — a 16-site `hodeproblem`, the highest-dimensional problem
+  of the implicit-midpoint set.
 
 ### Nonlinear Integrator
 
@@ -72,13 +78,23 @@ degenerate Lagrangians are not currently supported by `NonLinear_OneLayer_GML`.
 
 - **`Newton` with a robust line search, and `DogLeg`, are the most efficient**:
   one iteration per step on the (linear) oscillator, about two on the pendulum.
-- **The `Quadratic` line search is fragile** — it fails on the oscillator at low
-  precision and never converges on the pendulum; `BierlaireQuadratic` is
-  borderline and starts failing at lower precision and larger time steps.
-- **`Picard` is slow where it works and fragile where it does not**: on the
+- **The oscillator and the pendulum are solved by every configuration**: all 72
+  runs converge at both time steps, for all three precisions, all eight solver
+  configurations and all three initial guesses.
+- **All six line searches are comparably robust**, and so is `DogLeg`: across the
+  twelve implicit-midpoint sweeps each converges for the large majority of runs,
+  with `Bisection` the most robust of them. The choice between them matters far
+  less than the choice of solver — `Picard` is the outlier, not any line search.
+- **`Picard` is slow where it works and fails where it does not**: on the
   oscillator and pendulum it converges but needs many iterations (≈ 8 to 30 per
   step) and is the most guess-sensitive; on the non-canonical Lotka–Volterra
-  `iodeproblem`s it **fails to converge entirely**.
+  `iodeproblem`s and on the double pendulum it **never converges** (0/9 in every
+  sweep).
+- **`Bisection` stops at the tolerance it was asked for**, where the others
+  overshoot it. Its residual lands right at `f_abstol` (`8 eps(T)`: ≈ `1e-6` at
+  `Float32`, ≈ `2e-15` at `Float64`), while the remaining line searches happen to
+  drive the residual one to two orders of magnitude below the requested tolerance.
+  Read the residual columns against `f_abstol`, not against each other.
 - **`MidpointExtrapolation` tends to give the best initial guess** (fewest Picard
   iterations); `NoInitialGuess` (reuse of the previous step) the worst.
 - **Precision sets the achievable accuracy** (energy drift ≈ `1e-17`, `1e-8`,
@@ -98,6 +114,9 @@ the raw results to `results/`:
 julia --project=. scripts/midpoint_harmonic_oscillator.jl
 julia --project=. scripts/midpoint_pendulum.jl
 ```
+
+`scripts/run_all.jl` runs every benchmark on this site — both experiment sets, at
+both step sizes — in one go.
 
 See the [API](@ref) for the building blocks used to define new problems and
 assemble custom benchmarks.

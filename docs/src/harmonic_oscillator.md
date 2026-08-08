@@ -63,14 +63,19 @@ plot_accuracy(df)
 ## Discussion
 
 - Because the problem is linear, the implicit midpoint equations are linear too,
-  so **Newton converges in exactly one iteration per step** for every line search
-  that converges (`Static`, `Backtracking`, `Bisection`, `StrongWolfe`), as does
-  `DogLeg`. The choice of line search is therefore essentially irrelevant to the
-  iteration count here.
-- The **`Quadratic` line search is fragile** on this problem (it fails to
-  converge at several precisions), and **`BierlaireQuadratic` fails at `Float16`
-  and `Float32`**: their bracketing logic is ill-suited to a problem where the
-  full Newton step is already exact.
+  so **Newton converges in exactly one iteration per step** for every line search,
+  as does `DogLeg`. The choice of line search is therefore essentially irrelevant
+  to the iteration count here.
+- **Every configuration converges**: all 72 runs — three precisions × eight solver
+  configurations × three initial guesses. The `Quadratic` and
+  `BierlaireQuadratic` line searches used to fail at several precisions on this
+  problem; SimpleSolvers 0.10 fixed the underlying defects and they now converge
+  throughout.
+- **`Bisection` stops at the requested tolerance**; the others overshoot it. Its
+  residual sits right at `f_abstol = 8 eps(T)` (≈ `1e-6` at `Float32`, ≈ `2e-15` at
+  `Float64`), whereas the remaining line searches drive it a further two to three
+  orders of magnitude down. All of them converge — the difference is how far past
+  the tolerance they go, not whether they reach it.
 - **`Picard`** (a fixed-point iteration) converges but needs many more iterations
   (≈ 8 per step at `Float64`) and is by far the slowest solver.
 - **Precision sets the achievable accuracy**: the energy is conserved to roughly
