@@ -1,18 +1,54 @@
-# Solver-option keyword arguments passed to the integrator. Passing any options
-# replaces the integrator defaults entirely, so we restate the defaults
-# (`min_iterations = 1`, `f_abstol = 8 eps(T)`) alongside a generous iteration cap.
-# The harness detects (non-)convergence itself and records it per run, so the
-# solver's own chatter is turned off: `verbosity = 0` and `warn_iterations = 0`
-# (the "Solver took N iterations" warning is gated by `warn_iterations`, not
-# `verbosity`, and would otherwise fire on every step of a divergent run).
-# Converging configurations need only a handful of iterations, so a modest
-# `max_iterations` cap lets divergent ones give up quickly without changing results.
-# `f_abstol` is the absolute residual tolerance; it defaults to the integrator's
-# `8 eps(T)` but is relaxed for larger-scale problems (see `ProblemSpec`).
+# Solver options passed to the integrator, merged over `default_options(method,
+# problem)` — so only what the harness changes is listed:
+#  - `verbosity`/`warn_iterations`: the harness records (non-)convergence itself, so
+#    the solver stays silent. Both are needed — the "Solver took N iterations"
+#    warning is gated by `warn_iterations`, not `verbosity`, and would otherwise
+#    fire on every step of a divergent run.
+#  - `max_iterations`: converging configurations need only a handful of iterations,
+#    so this modest cap merely bounds how long divergent ones run.
+#  - `f_abstol`: absolute residual tolerance. The framework default,
+#    `max(8, solversize(method, problem)) * eps(T)`, is `8 eps(T)` for every problem
+#    benchmarked here; stated explicitly so it can be relaxed per problem
+#    (see `ProblemSpec`).
 _solver_options(::Type{T}; max_iterations::Integer = 100,
                 f_abstol::Real = 8 * eps(T)) where {T} =
-    (min_iterations = 1, max_iterations = max_iterations, f_abstol = f_abstol,
+    (max_iterations = max_iterations, f_abstol = f_abstol,
      verbosity = 0, warn_iterations = 0)
+
+# `_solver_options` silences everything the *benchmarked* solver emits. Two
+# sources of chatter remain that no solver option can reach, which is what
+# `quiet = true` suppresses:
+#
+#  1. `HermiteExtrapolation` warns whenever two consecutive history entries
+#     coincide (a step whose solve does not move `q`). Emitted by
+#     GeometricIntegratorsBase, whose `nowarn` keyword is not threaded through
+#     `GeometricIntegrator`.
+#  2. `NonLinear_OneLayer_GML` seeds each step with its own inner integrator —
+#     `integrate(tem_ode, ImplicitMidpoint())`, called with *no* options, so that
+#     solve runs at the SimpleSolvers defaults (`verbosity = 1`,
+#     `warn_iterations = 1000`) behind a `Backtracking` line search regardless of
+#     what the benchmarked solver is configured with. Its warnings carry
+#     SimpleSolvers as their module, so filtering GeometricIntegratorsBase alone
+#     does not catch them. Forwarding the outer options to that inner `integrate`
+#     upstream would remove the need for `quiet` in the nonlinear sweep.
+#
+# Filtering just these two modules keeps documentation builds quiet without hiding
+# warnings from anywhere else; the harness's own failed-run warning is gated
+# separately on `quiet`.
+struct _QuietLogger{L<:Logging.AbstractLogger} <: Logging.AbstractLogger
+    parent::L
+end
+
+Logging.min_enabled_level(l::_QuietLogger) = Logging.min_enabled_level(l.parent)
+Logging.catch_exceptions(l::_QuietLogger) = Logging.catch_exceptions(l.parent)
+Logging.shouldlog(l::_QuietLogger, level, _module, group, id) =
+    _module !== GIB && _module !== SimpleSolvers &&
+    Logging.shouldlog(l.parent, level, _module, group, id)
+Logging.handle_message(l::_QuietLogger, args...; kwargs...) =
+    Logging.handle_message(l.parent, args...; kwargs...)
+
+_maybe_quiet(body, quiet::Bool) =
+    quiet ? Logging.with_logger(body, _QuietLogger(Logging.current_logger())) : body()
 
 # Build a `GeometricIntegrator` for one solver/line-search/initial-guess combination.
 # `DogLeg` and `Picard` do not accept a line search, so the keyword is omitted for them.
@@ -85,8 +121,8 @@ given integrator `method`. Returns a `NamedTuple` row of metrics.
 `max_iterations` caps the nonlinear solver's iterations per step; converging
 configurations use far fewer, so this mainly bounds how long divergent ones run.
 
-With `quiet = true` any warnings emitted while integrating are suppressed (useful
-in documentation builds); convergence is recorded regardless.
+With `quiet = true` the warning reporting a failed run is suppressed (useful in
+documentation builds); the failure is recorded as a non-converged row regardless.
 
 Any error during integration (e.g. a divergent solve in low precision) is caught
 and recorded as a non-converged row rather than aborting the whole sweep.
@@ -104,7 +140,7 @@ function run_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, igcfg::Initi
                    runtime_s = missing, max_residual = missing,
                    energy_drift = missing, accuracy = missing)
 
-    body = function ()
+    _maybe_quiet(quiet) do
     try
         prob   = spec.builder(T)
         params = GIB.parameters(prob)
@@ -116,8 +152,8 @@ function run_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, igcfg::Initi
 
         # timing (integrator is warm after the representative run). The
         # BenchmarkTools budget is capped so that non-converging configurations
-        # (which run to the iteration limit every step) do not dominate wall time.
-        # `:none` skips the extra timing run entirely.
+        # (which spend far more iterations per step than converging ones) do not
+        # dominate wall time. `:none` skips the extra timing run entirely.
         runtime = if timing === :benchmark
             @belapsed _drive!($int, $prob) samples = 100 seconds = 2
         elseif timing === :quick
@@ -152,12 +188,10 @@ function run_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, igcfg::Initi
                 runtime_s = runtime === missing ? missing : Float64(runtime),
                 max_residual = res.max_residual, energy_drift, accuracy)
     catch err
-        @warn "run_case failed" problem = spec.name precision = T solver = solver_label(scfg) initial_guess = igcfg.name exception = err
+        quiet || @warn "run_case failed" problem = spec.name precision = T solver = solver_label(scfg) initial_guess = igcfg.name exception = err
         return missing_row
     end
-    end  # body
-
-    return quiet ? Logging.with_logger(body, Logging.NullLogger()) : body()
+    end  # _maybe_quiet
 end
 
 """

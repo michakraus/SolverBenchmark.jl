@@ -2,8 +2,8 @@
 # `NonLinear_OneLayer_GML` from NonlinearIntegrators.jl. Unlike the implicit
 # midpoint sweep (precision × solver × initial guess), this sweep varies the
 # solver's `regularization_factor` in place of the initial guess (the network
-# integrator uses its own built-in initial guess, `OGA1d`), across the same set
-# of precisions and a reduced set of solver configurations.
+# integrator brings its own seed — see `nonlinear_onelayer_method`), across the
+# same set of precisions and a reduced set of solver configurations.
 #
 # The network integrator solves a near-singular nonlinear system, so a nonzero
 # `regularization_factor` (a Levenberg–Marquardt-style shift added to the Newton
@@ -161,8 +161,8 @@ The network basis and the quadrature are both built at `T` (the constructor
 requires them to share the element type), so the integration runs genuinely at
 the requested precision.
 
-`initial_guess_method` selects the network's built-in seed; it defaults to the
-validated `OGA1d_Legacy()` (see below). The activation-study script overrides both
+`initial_guess_method` selects the network's built-in seed; it defaults to
+`OGA1d_Legacy()` (see below). The activation-study script overrides both
 `activation` and `initial_guess_method` (with `OGA1d()`) to compare smooth
 activations against the ReLU baseline; the `k` keyword is used only by the default
 `relu_k(k)` and is ignored when an explicit `activation` is passed.
@@ -174,15 +174,14 @@ function nonlinear_onelayer_method(::Type{T}; R = 8, S = 4, k = 3,
                                    initial_guess_method = OGA1d_Legacy()) where {T}
     network    = OneLayerNetwork_GML{T}(activation, S)
     quadrature = GaussLegendreQuadrature(T, R)
-    # The default seeds the network solve with the Float64-island OGA
-    # (`OGA1d_Legacy`), the variant this benchmark was validated against.
-    # NonlinearIntegrators' current default `OGA1d` is a newer working-precision QR
-    # seed that regresses these problems with the ReLU activation — the double
-    # pendulum solve stalls at a residual of ~0.18 for every dictionary size, and
-    # at Float16 it returns a finite-but-poor seed that slips under the relaxed
-    # tolerance instead of the expected singular failure. Keep the legacy seed as
-    # the default so the production benchmark stays meaningful; the activation study
-    # passes `OGA1d()` explicitly (it pairs better with smooth activations).
+    # `OGA1d_Legacy` (a Float64-island OGA) is the default rather than
+    # NonlinearIntegrators' own default `OGA1d` (a working-precision QR seed),
+    # because `OGA1d` regresses these problems with the ReLU activation: the double
+    # pendulum solve stalls at a residual of ~0.18 for every dictionary size, and at
+    # Float16 it returns a finite-but-poor seed that slips under the relaxed
+    # tolerance instead of failing outright as a singular Jacobian — which would
+    # make the benchmark report convergence it has not achieved. The activation
+    # study passes `OGA1d()` explicitly; it pairs better with smooth activations.
     NonLinear_OneLayer_GML(network, quadrature;
         bias_interval = T.(bias_interval), dict_amount = dict_amount,
         initial_guess_method = initial_guess_method)
@@ -239,7 +238,7 @@ function run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ
                    runtime_s = missing, max_residual = missing,
                    energy_drift = missing, accuracy = missing)
 
-    body = function ()
+    _maybe_quiet(quiet) do
     try
         prob   = spec.builder(T)
         params = GIB.parameters(prob)
@@ -286,12 +285,10 @@ function run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ
                 runtime_s = runtime === missing ? missing : Float64(runtime),
                 max_residual = res.max_residual, energy_drift, accuracy)
     catch err
-        @warn "run_nonlinear_case failed" problem = spec.name precision = T solver = solver_label(scfg) regularization = λ exception = err
+        quiet || @warn "run_nonlinear_case failed" problem = spec.name precision = T solver = solver_label(scfg) regularization = λ exception = err
         return missing_row
     end
-    end  # body
-
-    return quiet ? Logging.with_logger(body, Logging.NullLogger()) : body()
+    end  # _maybe_quiet
 end
 
 """
