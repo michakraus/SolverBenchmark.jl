@@ -1,11 +1,3 @@
-# Number of consecutive non-moving steps after which a solve is declared stalled;
-# SimpleSolvers defaults to 2. Five buys a little tolerance for solves that pause
-# before making progress again, without letting a genuinely stuck one run to
-# `max_iterations`. Measured against the default it is close to a no-op: three
-# extra runs converge across the twelve implicit-midpoint sweeps (~1700 runs) and
-# nothing changes at all in the nonlinear sweeps.
-const MAX_STALLS = 5
-
 # Solver options passed to the integrator, merged over `default_options(method,
 # problem)` — so only what the harness changes is listed:
 #  - `verbosity`/`warn_iterations`: the harness records (non-)convergence itself, so
@@ -20,7 +12,7 @@ const MAX_STALLS = 5
 #    (see `ProblemSpec`).
 _solver_options(::Type{T}; max_iterations::Integer = 100,
                 f_abstol::Real = 8 * eps(T)) where {T} =
-    (max_iterations = max_iterations, f_abstol = f_abstol, max_stalls = MAX_STALLS,
+    (max_iterations = max_iterations, f_abstol = f_abstol,
      verbosity = 0, warn_iterations = 0)
 
 # `_solver_options` silences everything the *benchmarked* solver emits. Two

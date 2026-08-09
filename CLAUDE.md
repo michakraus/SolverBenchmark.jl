@@ -106,8 +106,8 @@ GeometricProblems 0.8.2 / EulerLagrange 0.5.1.)
 - `Newton` (robust line search) and `DogLeg` are the most efficient: 1 iter/step on
   the linear oscillator, ~2 on the pendulum and Lotka–Volterra systems.
 - **All six line searches are comparably robust**, as is `DogLeg`. Over the twelve
-  implicit-midpoint sweeps (108 runs each): Bisection 106, DogLeg 100, Quadratic 99,
-  StrongWolfe 99, Static 98, Backtracking 98, BierlaireQuadratic 98, Picard 39.
+  implicit-midpoint sweeps (108 runs each): Bisection 106, DogLeg 100, StrongWolfe 99,
+  Static 98, Backtracking 98, BierlaireQuadratic 98, Quadratic 95, Picard 39.
 - **`Bisection` reports the largest residual, and that is correct** — see the gotcha
   above: it stops at `f_abstol`, the others overshoot it.
 - `Picard` is slow where it works (oscillator/pendulum: now 9/9 everywhere) and
