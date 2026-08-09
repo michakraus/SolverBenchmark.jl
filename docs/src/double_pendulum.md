@@ -54,7 +54,8 @@ plot_energy_drift(df)
 - The problem is **chaotic and nonlinear**, so Newton needs genuine iterations at
   every step. All six line searches behave similarly; `Newton/Quadratic` is the
   weakest of them but still converges for two thirds of the runs. `Picard` never
-  converges here, and is the only failure at `Float32`/`Float64`.
+  converges here, and at `Δt = 0.01` it is the only failure at
+  `Float32`/`Float64`; at the coarse step `DogLeg` joins it.
 - No closed-form solution is available, so accuracy is judged solely through the
   energy drift, which scales with the floating point precision.
 

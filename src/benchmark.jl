@@ -1,7 +1,9 @@
-# Number of consecutive non-moving steps after which a solve is declared stalled.
-# SimpleSolvers defaults to 2, which the near-singular network solves of
-# `src/nonlinear.jl` trip while still making progress; 5 gives them room without
-# letting a genuinely stuck solve run to `max_iterations`.
+# Number of consecutive non-moving steps after which a solve is declared stalled;
+# SimpleSolvers defaults to 2. Five buys a little tolerance for solves that pause
+# before making progress again, without letting a genuinely stuck one run to
+# `max_iterations`. Measured against the default it is close to a no-op: three
+# extra runs converge across the twelve implicit-midpoint sweeps (~1700 runs) and
+# nothing changes at all in the nonlinear sweeps.
 const MAX_STALLS = 5
 
 # Solver options passed to the integrator, merged over `default_options(method,

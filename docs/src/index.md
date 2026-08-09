@@ -81,10 +81,11 @@ degenerate Lagrangians are not currently supported by `NonLinear_OneLayer_GML`.
 - **The oscillator and the pendulum are solved by every configuration**: all 72
   runs converge at both time steps, for all three precisions, all eight solver
   configurations and all three initial guesses.
-- **All six line searches are comparably robust**, and so is `DogLeg`: across the
-  twelve implicit-midpoint sweeps each converges for the large majority of runs,
-  with `Bisection` the most robust of them. The choice between them matters far
-  less than the choice of solver — `Picard` is the outlier, not any line search.
+- **All six line searches are comparably robust**, and so is `DogLeg`. Over the
+  twelve implicit-midpoint sweeps (108 runs each): `Bisection` 106, `DogLeg` 100,
+  `Quadratic` 99, `StrongWolfe` 99, `Static` 98, `Backtracking` 98,
+  `BierlaireQuadratic` 98 — against `Picard` at 39. The choice between line
+  searches matters far less than the choice of solver.
 - **`Picard` is slow where it works and fails where it does not**: on the
   oscillator and pendulum it converges but needs many iterations (≈ 8 to 30 per
   step) and is the most guess-sensitive; on the non-canonical Lotka–Volterra

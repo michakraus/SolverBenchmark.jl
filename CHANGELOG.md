@@ -13,9 +13,10 @@ Upgrade to the current Geometric* stack.
 - **Dependencies**: GeometricIntegrators 0.17, GeometricIntegratorsBase 0.5.1,
   SimpleSolvers 0.10.1, GeometricProblems 0.8 (which pulls EulerLagrange 0.5).
   Requires NonlinearIntegrators with compat for that stack.
-- **`max_stalls = 5`** for every solve, against a SimpleSolvers default of 2. The
-  near-singular network solves of the nonlinear experiment set trip two consecutive
-  non-moving steps while still making progress.
+- **`max_stalls = 5`** for every solve, against a SimpleSolvers default of 2, to
+  tolerate solves that pause before making progress again. Measured, it is close to
+  a no-op: three extra runs converge across the twelve implicit-midpoint sweeps
+  (~1700 runs) and nothing changes in the nonlinear sweeps.
 - **`quiet = true` filters instead of muffling.** It installs a logger that drops
   records from GeometricIntegratorsBase and SimpleSolvers, rather than wrapping each
   run in a `NullLogger`. `verbosity = 0` now silences the benchmarked solver on its
