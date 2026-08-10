@@ -31,7 +31,7 @@ constraint worth preserving when extending it.
 | File | Contents |
 |:-----|:---------|
 | `src/problems.jl` | [`ProblemSpec`](@ref) and the implicit-midpoint specs. Oscillator and pendulum use `odeproblem`, Lotka–Volterra 2d/4d `iodeproblem`, double pendulum and Toda lattice (``N = 16``) `hodeproblem`. |
-| `src/configurations.jl` | [`SolverConfig`](@ref)/[`InitialGuessConfig`](@ref), [`solver_label`](@ref)/[`precision_label`](@ref), and the default grid. |
+| `src/configurations.jl` | [`SolverConfig`](@ref)/[`InitialGuessConfig`](@ref)/[`RegularizationConfig`](@ref), [`solver_label`](@ref)/[`precision_label`](@ref), the [`scaled_regularization`](@ref) ladder, and the default grid. |
 | `src/benchmark.jl` | Solver options, the `quiet` logger, [`run_case`](@ref)/[`run_benchmark`](@ref). |
 | `src/nonlinear.jl` | The second experiment set: LODE specs, activation factories ([`relu_k`](@ref)/[`gelu`](@ref)/[`elu`](@ref)), [`nonlinear_onelayer_method`](@ref), [`run_nonlinear_case`](@ref)/[`run_nonlinear_benchmark`](@ref). |
 | `src/bfloat16.jl` | The `BFloat16` compatibility layer — see [Low-Precision Support](@ref). |
@@ -137,6 +137,11 @@ nonlinear sweep.
   `nameof(T)`) rather than `string(T)`: Julia renders a type module-qualified
   whenever its module is not visible from `Main`, so `string(BFloat16)` is
   `"BFloat16s.BFloat16"` inside a Documenter `@example` sandbox.
-- The regularization panels of the nonlinear sweep have no order constant; they rely
-  on `_ordered` appending unlisted values in first-appearance order, which works
-  because ``\lambda`` is the innermost loop.
+- **The regularization panels are labelled by ladder rung, not by value**, and
+  ordered by `_REGULARIZATION_ORDER`. The value behind a rung depends on the
+  precision (see [How the regularization factor scales](@ref)), so a value label
+  would not be shared across the precisions a single `DataFrame` holds; the value and
+  its exponent travel in the `regularization_factor`/`regularization_exponent`
+  columns instead. `_PANEL_ORDER` concatenates the initial-guess and regularization
+  orders, so one default serves both experiment sets and no call site has to name the
+  order it wants.

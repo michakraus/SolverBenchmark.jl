@@ -19,12 +19,20 @@ regularization Newton does not converge. The swept options are:
 |:----------|:-------|
 | Precision | `BFloat16`, `Float16`, `Float32`, `Float64` |
 | Solver | `Newton/Static`, `Newton/Backtracking`, `Newton/StrongWolfe`, `DogLeg` |
-| Regularization ``\lambda`` | `0`, `1e-3`, `1e-5`, `1e-7` |
+| Regularization ``\lambda`` | ``0``, and rungs 1–6 of the ``\sqrt{\varepsilon(T)}`` ladder |
 
 Each run integrates **ten time steps**, and the three step sizes
 ``\Delta t = 0.1, 1.0, 10.0`` therefore span ``(0,1)``, ``(0,10)`` and ``(0,100)``.
 The figures below panel by ``\lambda``; within each panel the solver
 configurations are on the x-axis and the precisions are distinguished by colour.
+
+!!! note "A rung is a different number at each precision"
+    ``\lambda`` is swept as multiples of ``\sqrt{\varepsilon(T)}``, not as absolute
+    values, so that the shift is scaled to the precision it protects. Rung 4 is
+    ``16\sqrt{\varepsilon(T)}`` — `0.5` at `Float16`, `5.5e-3` at `Float32` — and the
+    `Float64` ladder is stretched to ``2^k`` with ``k = 2, 4, \dots, 12``, where rung 2
+    is the same ``16\sqrt\varepsilon``. [How the regularization factor scales](@ref)
+    has the full table; each row's own value is in the results CSV.
 
 The benchmark is regenerated at documentation build time with a single, fast
 timing pass. See the driver script `scripts/nonlinear_harmonic_oscillator.jl` for
@@ -81,26 +89,34 @@ plot_accuracy(df; panelcol = :regularization)
 
 ## Discussion
 
-- **Regularization is essential.** With ``\lambda = 0`` the Newton iteration does
-  not converge for *any* solver — the network parameterization makes the Jacobian
-  near-singular, so the step stalls at a residual floor well above the tolerance.
-  A small ``\lambda`` (``10^{-3}`` to ``10^{-7}``) regularizes the Jacobian and the
-  solve converges in only a few iterations per step, to an accuracy of
-  ``\approx 10^{-13}`` at `Float64`.
+- **Regularization is essential, and it is a threshold rather than a tuned value.**
+  At ``\lambda = 0`` the `Float64` Newton iteration converges for *no* solver: it
+  runs out its 1000-iteration budget at a residual of ``\approx 3 \times 10^{-12}``,
+  above the tolerance, because the network parameterization makes the Jacobian
+  near-singular. Every one of the six rungs fixes it, and they are
+  indistinguishable from each other — 2.0–2.2 iterations per step, residual
+  ``\approx 5 \times 10^{-14}``, accuracy ``1.41`` to
+  ``1.44 \times 10^{-13}`` across a ladder spanning
+  ``6 \times 10^{-8}`` to ``6 \times 10^{-5}``, a factor of a thousand. Nothing in
+  this range over-damps; ``\lambda`` only has to be nonzero.
 - **The choice of line search barely matters** once regularization is on: all of
   `Static`, `Backtracking`, `StrongWolfe` and `DogLeg` behave almost identically,
   because the regularized Newton step is already close to optimal.
-- **Both 16-bit formats fail.** Neither can factor the (regularized) network
-  Jacobian — the LU factorization is singular — so no configuration converges at
-  `Float16` or `BFloat16` (0/16 each), regardless of ``\lambda``. These runs are
-  recorded as failures. `BFloat16`'s wider exponent does not help: the obstacle
-  is the conditioning of the factorization, which wants significand bits, and it
-  has three fewer than `Float16`. The 25 converged runs of 64 are all `Float32`
-  (13/16) and `Float64` (12/16).
-- **`Float32` reaches its residual floor** (``\approx 10^{-5}``) and is reported as
-  converged under the relaxed tolerance used for this problem
-  (``256\,\varepsilon``); its accuracy against the analytic solution is
-  ``\approx 10^{-6}``.
+- **Both 16-bit formats fail, and regularization cannot reach the reason.** No
+  configuration converges at `Float16` or `BFloat16` (0/28 each), at any rung. The
+  failure is a `SingularException` — but not from the Newton Jacobian. It is raised
+  in `NonlinearIntegrators.initial_params!`, by the ``G_k x_k = b`` Gram solve of the
+  **OGA initial guess**, whose third selected neuron is already linearly dependent on
+  its predecessors at 16 bits. That runs before the Newton iteration of every step,
+  and `regularization_factor` shifts only the Newton Jacobian diagonal, so no rung of
+  the ladder can lift it. Lifting it would mean regularizing the seed's normal
+  equations upstream. `BFloat16`'s wider exponent does not help — the obstacle is
+  conditioning, which wants significand bits, and it has three fewer than `Float16`.
+- **`Float32` reaches its residual floor** (``\approx 3 \times 10^{-5}``) in about one
+  iteration per step and is reported as converged under the relaxed tolerance used for
+  this problem (``256\,\varepsilon``); its accuracy against the analytic solution is
+  ``\approx 5 \times 10^{-7}``. Here ``\lambda = 0`` converges too — for three of the
+  four solvers — so at this step size `Float32` is not regularization-limited at all.
 - **The OGA dictionary size** (`dict_amount`) has little effect on accuracy here: a
   few hundred candidate neurons match the reference's several hundred thousand,
   while being markedly faster. The dictionary is assembled in double precision, so
@@ -114,7 +130,17 @@ markdown_table(summary_table(df; panelcol = :regularization))
 
 ## Coarse time step (Δt = 1.0)
 
-The same benchmark with a ten-times-larger step (still ten steps, so ``(0,10)``):
+The same benchmark with a ten-times-larger step (still ten steps, so ``(0,10)``).
+
+At this step size `Float32` shows how indirectly ``\lambda`` acts once the seed is the
+binding constraint: it converges at **rung 4 only** — and there for all four solvers,
+with the same residual ``5.5 \times 10^{-6}`` — while every other rung, and
+``\lambda = 0``, raises the OGA `SingularException` described above. That is not a
+sweet spot in ``\lambda``. The seed is re-run at every step from the previous step's
+solution, so a different ``\lambda`` perturbs the trajectory that the next seed is
+built from, and which value happens to keep the Gram matrix full-rank for all ten
+steps is incidental. Read it as "`Float32` is marginal here", not as "``16\sqrt\varepsilon``
+is optimal here".
 
 ```@example nlho
 spec1 = harmonic_oscillator_lode_spec(timespan = (0.0, 10.0), timestep = 1.0)

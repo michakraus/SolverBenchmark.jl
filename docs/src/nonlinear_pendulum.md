@@ -10,8 +10,10 @@ pendulum is nonlinear, so it exercises the solves more than the harmonic
 oscillator. No closed-form solution is used; accuracy is assessed through the
 energy drift.
 
-The figures panel by the regularization factor ``\lambda``; solver configurations
-are on the x-axis and precisions are distinguished by colour. Results are shown at
+The figures panel by the regularization factor ``\lambda`` — a rung of the
+``\sqrt{\varepsilon(T)}`` ladder, so one panel is a different shift at each
+precision; solver configurations are on the x-axis and precisions are
+distinguished by colour. Results are shown at
 ``\Delta t = 0.1`` and repeated for ``\Delta t = 1.0`` and ``\Delta t = 10.0``
 (ten steps each).
 
@@ -51,16 +53,22 @@ plot_energy_drift(df; panelcol = :regularization)
 
 ## Discussion
 
-- As for the harmonic oscillator, **a nonzero regularization factor is required**:
-  with ``\lambda = 0`` the Newton iteration stalls, while ``\lambda > 0`` converges
-  in a handful of iterations, conserving the energy to ``\approx 10^{-8}`` at
-  `Float64`.
+- As for the harmonic oscillator, **a nonzero regularization factor is required**,
+  and any rung will do. At `Float64`, ``\lambda = 0`` converges for no solver; every
+  rung converges for all four, in ``\approx 2.3`` iterations per step, conserving the
+  energy to ``8.05 \times 10^{-8}`` — to three significant figures the *same* drift at
+  every rung, across a ladder spanning a factor of a thousand.
 - The pendulum's nonlinearity means the solve needs a few more iterations per step
   than the (linear) oscillator.
-- **Both 16-bit formats fail** (singular Newton Jacobian), as they do throughout
-  the nonlinear study: 0/16 at `Float16` and 0/16 at `BFloat16`, against 12/16 at
-  each of `Float32` and `Float64`. `BFloat16`'s wider exponent does not help — the
-  network Jacobian is near-singular, and resolving it takes significand bits.
+- **`Float32` converges from rung 2 up** (23/28): all four solvers at rungs 2–6, but
+  three of four at ``\lambda = 0`` and **none at rung 1**. A rung that is worse than no
+  regularization at all is the signature of the seed, not the solver — the OGA guess is
+  rebuilt from the previous step's solution, so ``\lambda`` perturbs the trajectory it
+  is built from and can push a later step's Gram matrix into rank deficiency. See
+  [Harmonic Oscillator (Nonlinear Integrator)](@ref) for that mechanism.
+- **Both 16-bit formats fail at every rung** (0/28 each, against 23/28 at `Float32`
+  and 24/28 at `Float64`). The exception again comes from the OGA initial guess's Gram
+  solve, not from the Newton Jacobian, so `regularization_factor` cannot reach it.
 
 ## Results table
 

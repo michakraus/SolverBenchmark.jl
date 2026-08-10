@@ -137,3 +137,44 @@ Two specs are worth knowing about:
     converged `BFloat16` row there has met a target too loose to say much. This is
     why every results table records the `f_abstol` each run used and flags rows that
     stopped *at* it in an `at_tolerance` column; see [`summary_table`](@ref).
+
+## How the regularization factor scales
+
+The nonlinear-integrator sweep varies the solver's `regularization_factor` — the shift
+SimpleSolvers adds to the Newton Jacobian diagonal before factorizing it. Unlike
+`f_abstol_factor`, **this one is a property of the precision**, so it is swept as
+multiples of ``\sqrt{\varepsilon(T)}``: that is the scale at which a Jacobian entry stops
+being distinguishable from its own rounding error, and an absolute shift chosen for
+`Float64` falls below it at `Float16`, where it cannot lift a singular Jacobian at all.
+Scaling ``\lambda`` is what keeps "``\lambda`` too small" separable from "precision too
+low".
+
+The six rungs are spread over two ladders, because a range of multipliers that reaches a
+useful shift in double precision over-damps half precision several times over:
+
+| Precision | ``\sqrt{\varepsilon(T)}`` | rung 1 | rung 2 | rung 3 | rung 4 | rung 5 | rung 6 |
+|:----------|--------:|-------:|-------:|-------:|-------:|-------:|-------:|
+| `BFloat16` | 8.84e-2 | 0.177 | 0.354 | **0.707** | 1.414 | 2.828 | 5.656 |
+| `Float16` | 3.13e-2 | 0.0625 | 0.125 | 0.25 | **0.5** | 1.0 | 2.0 |
+| `Float32` | 3.45e-4 | 6.91e-4 | 1.38e-3 | 2.76e-3 | **5.52e-3** | 1.10e-2 | 2.21e-2 |
+| `Float64` | 1.49e-8 | 5.96e-8 | **2.38e-7** | 9.54e-7 | 3.81e-6 | 1.53e-5 | 6.10e-5 |
+
+`BFloat16`, `Float16` and `Float32` use ``2^k \sqrt{\varepsilon(T)}`` for
+``k = 1 \dots 6``; `Float64` uses ``k = 2, 4, \dots, 12``. The bold entries are
+``16\sqrt{\varepsilon(T)}``, NonlinearIntegrators' recommended default — rung 4 on the
+reduced-precision ladder, rung 2 on the `Float64` one — so each ladder is anchored on a
+shift already known to work and probes octaves either side of it. See
+[`scaled_regularization`](@ref) and [`regularization_exponent`](@ref); what the ladder
+measured is in [Findings](@ref).
+
+**The panels are labelled by rung, not by value.** One benchmark `DataFrame` holds all
+four precisions and every plot and table groups on that label; since the two ladders
+share only two exponents, labelling by value would scatter the figures across eleven
+mostly-empty panels. Each row's own exponent and value are recorded in the
+`regularization_exponent` and `regularization_factor` columns of the CSV.
+
+!!! warning "Form the factor in `Float64`, then convert"
+    `T(2.0^k * sqrt(Float64(eps(T))))` rather than `T(2)^k * sqrt(eps(T))`: the latter
+    overflows to `Inf` for `Float16` from ``k = 16`` on, and since
+    [`run_nonlinear_case`](@ref) records every exception as a non-converged row, that
+    turns a rung into a silent non-run rather than an error.

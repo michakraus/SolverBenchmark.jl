@@ -7,8 +7,10 @@ chaotic and strongly nonlinear, it is a demanding test for the implicit network
 solve. Its Hamiltonian depends on both `q` and `p`, so the energy drift is
 evaluated from the full state. No closed-form solution exists.
 
-The figures panel by the regularization factor ``\lambda``; solver configurations
-are on the x-axis and precisions are distinguished by colour. Results are shown at
+The figures panel by the regularization factor ``\lambda`` — a rung of the
+``\sqrt{\varepsilon(T)}`` ladder, so one panel is a different shift at each
+precision; solver configurations are on the x-axis and precisions are
+distinguished by colour. Results are shown at
 ``\Delta t = 0.1`` and repeated for ``\Delta t = 1.0`` and ``\Delta t = 10.0``
 (ten steps each).
 
@@ -48,18 +50,22 @@ plot_energy_drift(df; panelcol = :regularization)
 
 ## Discussion
 
-- **Regularization is again decisive**: `Newton` stalls at ``\lambda = 0`` and
-  converges in a few iterations once ``\lambda > 0``. `DogLeg` (a trust-region
-  method) is the most robust here — it can make progress even at ``\lambda = 0``,
-  where the line-search Newton variants do not.
+- **Regularization is again decisive**, and again flat across the ladder: at
+  `Float64`, `Backtracking` and `StrongWolfe` converge at every one of the six rungs
+  and at none of them for ``\lambda = 0``, taking ``\approx 15`` iterations per step
+  with an energy drift of ``2.11 \times 10^{-4}`` that is identical to three
+  significant figures at every rung. `DogLeg` (a trust-region method) is the most
+  robust here — it is the only configuration that makes progress even at
+  ``\lambda = 0``, and `Newton/Static` converges nowhere at any rung. That is the
+  clearest ordering of the four solver configurations anywhere in the study.
 - The chaotic dynamics give a larger energy drift than the integrable examples,
   and the achievable step size is smaller — at ``\Delta t = 1.0`` and above the
   solve struggles.
-- **Only `Float64` converges at all** (9/16): `Float32`, `Float16` and `BFloat16`
-  all fail outright with a singular Newton Jacobian. Within `Float64`, `DogLeg`
-  converges for all four regularization factors, `StrongWolfe` for three and
-  `Backtracking` for two, while `Newton/Static` never does — the clearest
-  ordering of the four solver configurations anywhere in the study.
+- **Only `Float64` converges at all** (19/28). `Float32`, `Float16` and `BFloat16`
+  fail at every rung, and scaling ``\lambda`` to the precision does not change that:
+  the exception is raised in the OGA initial guess's Gram solve, which runs before the
+  Newton iteration `regularization_factor` acts on — see
+  [Harmonic Oscillator (Nonlinear Integrator)](@ref).
 
 ## Results table
 

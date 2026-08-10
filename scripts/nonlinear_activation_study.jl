@@ -71,7 +71,7 @@ function best_rows(df::DataFrame)
                    DataFrames.order(:iterations_mean, by = _rank_num)])
         row = gg[1:1, :]
         # keep how many of the (solver × λ) configs converged in this cell, so a
-        # single best row still shows breadth of convergence (e.g. 12/16 vs 0/16)
+        # single best row still shows breadth of convergence (e.g. 24/28 vs 0/28)
         row.n_converged = [count(gg.converged)]
         row.n_total = [nrow(gg)]
         push!(parts, row)

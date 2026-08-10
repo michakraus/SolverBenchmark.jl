@@ -22,8 +22,29 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   code drops rows whose precision label it does not recognise.
 - `scripts/f_abstol_study.jl`, comparing the relaxed `f_abstol_factor = 256`
   against the framework default for the specs that override it.
+- `RegularizationConfig`, `scaled_regularization` and `regularization_exponent`:
+  the nonlinear sweep's `regularization_factor` is now a function of the working
+  precision rather than a number. Nonlinear rows carry the exponent and the value
+  each one resolved to in `regularization_exponent`/`regularization_factor`.
+- `_REGULARIZATION_ORDER` and `_PANEL_ORDER` in `src/plots.jl`, so the nonlinear
+  panels have an explicit display order instead of relying on `λ` being the
+  innermost loop. `_PANEL_ORDER` covers both experiment sets, so no call site has to
+  name the order it wants.
 
 ### Changed
+
+- **The nonlinear sweep's regularization is scaled to the precision.** It ran
+  `λ ∈ {0, 1e-3, 1e-5, 1e-7}`; all three nonzero values are far below `√eps(T)` at
+  anything but `Float64`, so they could not lift a near-singular Jacobian in reduced
+  precision and the sweep could not distinguish "λ too small" from "precision too
+  low". It now runs the `λ = 0` control plus six rungs of `2^k √eps(T)` —
+  `k = 1…6` at `BFloat16`/`Float16`/`Float32`, `k = 2, 4, …, 12` at `Float64`, both
+  ladders containing NonlinearIntegrators' recommended `16√eps(T)`. 112 runs per
+  nonlinear problem, up from 64. Panels are labelled by rung, because the value
+  behind a rung differs by precision while a `DataFrame` holds all four.
+  Measured, this removes the confound without changing the verdict: the
+  reduced-precision runs fail in the OGA initial guess, not in the Newton solve
+  `regularization_factor` acts on — see `docs/src/findings.md`.
 
 - **The Toda lattice uses the framework's default residual tolerance again.** Its
   `f_abstol_factor = 256` was re-measured against the alternative: it bought 3

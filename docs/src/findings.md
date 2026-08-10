@@ -8,7 +8,7 @@ Measured 2026-08-10 against GeometricIntegrators 0.17, GeometricIntegratorsBase
 0.5.1, SimpleSolvers 0.10.1, GeometricProblems 0.8.2 and EulerLagrange 0.5.1.
 The implicit-midpoint set is twelve sweeps (six problems × two time steps) of 96
 runs each; the nonlinear set is twelve sweeps (four problems × three time steps)
-of 64 runs each.
+of 112 runs each (4 precisions × 4 solvers × 7 regularization factors).
 
 ## Solvers and line searches
 
@@ -117,23 +117,56 @@ collision.
 
 ## Nonlinear integrator set
 
-- **Regularization is essential.** With ``\lambda = 0`` the Newton iteration
-  converges for no solver on any problem; the network parameterization makes the
-  Jacobian near-singular.
-- Converged runs per sweep, out of 64:
+- **Regularization is a threshold, not a tuned value.** Over the eleven measured
+  sweeps, ``\lambda = 0`` converges 8 times out of 176 while each of the six rungs
+  converges 23–31 times out of 176 — and the rungs are flat between themselves,
+  across ladders spanning a factor of a thousand:
+
+  | ``\lambda`` | 0 | rung 1 | rung 2 | rung 3 | rung 4 | rung 5 | rung 6 |
+  |:--|--:|--:|--:|--:|--:|--:|--:|
+  | Converged | 8 / 176 | 23 | 27 | 27 | **31** | 27 | 27 |
+
+  Rung 4's slight lead is not a peak worth tuning to; where the solve is
+  regularization-limited at all, every rung fixes it, and iteration count, residual
+  and energy drift agree to three significant figures from rung to rung. The value to
+  reach for is any nonzero one — NonlinearIntegrators' ``16\sqrt{\varepsilon(T)}``
+  (rung 4, or rung 2 at `Float64`) is as good as it needs to be.
+- Converged runs per sweep, out of 112. Eleven of the twelve are measured; the Toda
+  lattice at ``\Delta t = 10.0`` is still running, so every aggregate below is over
+  those eleven:
 
   | Problem | ``\Delta t = 0.1`` | ``\Delta t = 1.0`` | ``\Delta t = 10.0`` |
   |:--------|-----:|-----:|------:|
-  | [Harmonic Oscillator (Nonlinear Integrator)](@ref) | 25 | 13 | 0 |
-  | [Pendulum (Nonlinear Integrator)](@ref) | 24 | 0 | 0 |
-  | [Double Pendulum (Nonlinear Integrator)](@ref) | 9 | 0 | 0 |
-  | [Toda Lattice (Nonlinear Integrator)](@ref) | 12 | 0 | 0 |
+  | [Harmonic Oscillator (Nonlinear Integrator)](@ref) | 51 | 29 | 0 |
+  | [Pendulum (Nonlinear Integrator)](@ref) | 47 | 0 | 0 |
+  | [Double Pendulum (Nonlinear Integrator)](@ref) | 19 | 0 | 0 |
+  | [Toda Lattice (Nonlinear Integrator)](@ref) | 24 | 0 | *pending* |
 
-  ``\Delta t = 10.0`` converges nowhere, but ``\Delta t = 1.0`` is no longer
-  uniformly dead — the harmonic oscillator manages 13, all at `Float64`.
-- **Neither 16-bit format converges anywhere in this set** — 0/16 in every sweep,
-  for both. `Float32` converges only on the harmonic oscillator (13/16) and the
-  pendulum (12/16); the double pendulum and Toda LODEs are `Float64`-only.
-- `Float32` LODE runs are about 100× faster than they used to be (0.41 s → 0.004 s
-  on the harmonic oscillator, now matching `Float64`); the old `Float32` path was
-  pathologically slow.
+  ``\Delta t = 10.0`` converges nowhere on the three problems measured so far. At
+  ``\Delta t = 1.0`` only the harmonic oscillator survives, with 29 — 24 of them
+  `Float64` at every rung, 4 `Float32` at rung 4 alone, and 1 at ``\lambda = 0``.
+- **Neither 16-bit format converges anywhere in this set** — 0/28 in every sweep, for
+  both. `Float32` reaches 54/308 and `Float64` 116/308.
+- **Regularization cannot rescue the reduced-precision runs, because they do not fail
+  where it acts.** Of 308 rows each, `BFloat16` and `Float16` raised an exception on
+  *every one* and stalled on none: not a single 16-bit run ever reached a Newton
+  iteration that could be reported as non-convergent. The exception is a
+  `SingularException` from `NonlinearIntegrators.initial_params!` — the ``G_k x_k = b``
+  Gram solve of the **OGA initial guess**, whose third selected neuron is already
+  linearly dependent on its predecessors at 16 bits. That runs before the Newton solve
+  of every step, and `regularization_factor` shifts only the Newton Jacobian diagonal,
+  so no rung reaches it. Fixing it means regularizing the seed's normal equations
+  upstream.
+- **Where ``\lambda`` does reach the solve it is decisive**, and that is `Float64`
+  throughout plus `Float32` at the fine step: `Float64` stalls (rather than throws) on
+  95 of 308 rows, which is the failure mode a diagonal shift addresses, and every rung
+  removes it. `Float32` sits in between — 198 threw, 56 stalled.
+- **A rung can be worse than no regularization at all**, which is the signature of the
+  seed rather than the solver: `Float32` converges for three solvers at
+  ``\lambda = 0`` on the pendulum and for none at rung 1, and on the oscillator at
+  ``\Delta t = 1.0`` only rung 4 survives. The OGA guess is rebuilt from the previous
+  step's solution, so ``\lambda`` perturbs the trajectory the next seed is built from
+  and can push a later step's Gram matrix into rank deficiency. Read isolated
+  survivals as marginality, not as an optimum in ``\lambda``.
+- `Float32` LODE runs are as fast as `Float64` ones (0.004 s on the harmonic
+  oscillator).

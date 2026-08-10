@@ -44,11 +44,14 @@ A second experiment set uses the neural-network variational integrator
 `NonLinear_OneLayer_GML` from
 [NonlinearIntegrators.jl](https://github.com/JuliaGNI/NonlinearIntegrators.jl)
 instead of implicit midpoint. Because that integrator's nonlinear system is
-near-singular, the sweep varies the solver's **regularization factor**
-``\lambda \in \{0, 10^{-3}, 10^{-5}, 10^{-7}\}`` (in place of the initial guess)
-across the four precisions and a reduced set of four solver configurations
-(`Newton/Static`, `Newton/Backtracking`, `Newton/StrongWolfe`, `DogLeg`), at the
-step sizes ``\Delta t = 0.1, 1.0, 10.0`` (ten steps each).
+near-singular, the sweep varies the solver's **regularization factor** ``\lambda``
+(in place of the initial guess): the ``\lambda = 0`` control plus six rungs of a
+ladder of multiples of ``\sqrt{\varepsilon(T)}``, so that the shift is scaled to the
+precision it protects rather than fixed in absolute terms (see
+[How the regularization factor scales](@ref)). That runs across the four precisions
+and a reduced set of four solver configurations (`Newton/Static`,
+`Newton/Backtracking`, `Newton/StrongWolfe`, `DogLeg`), at the step sizes
+``\Delta t = 0.1, 1.0, 10.0`` (ten steps each) — 112 runs per sweep.
 
 ## Analyses
 
