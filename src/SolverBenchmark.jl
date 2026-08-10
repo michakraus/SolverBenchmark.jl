@@ -1,10 +1,12 @@
 module SolverBenchmark
 
 using BenchmarkTools
+using BFloat16s
 using CairoMakie
 using DataFrames
 using Logging
 using Printf
+import NaNMath
 import Markdown
 
 using GeometricIntegrators
@@ -35,9 +37,12 @@ export harmonic_oscillator_lode_spec, pendulum_lode_spec
 export double_pendulum_lode_spec, toda_lattice_lode_spec
 
 # benchmark configuration
+# `BFloat16` is re-exported so that `precisions = (BFloat16, ...)` can be written
+# without the caller taking a direct dependency on BFloat16s.
+export BFloat16
 export SolverConfig, InitialGuessConfig
 export default_solver_configs, default_initial_guesses, default_precisions
-export solver_label
+export solver_label, precision_label
 export nonlinear_onelayer_method, nonlinear_solver_configs, nonlinear_regularization_factors
 export relu_k, gelu, elu
 
@@ -49,6 +54,7 @@ export run_nonlinear_case, run_nonlinear_benchmark
 export summary_table, markdown_table
 export comparison_figure, plot_convergence, plot_iterations, plot_runtime, plot_energy_drift, plot_accuracy
 
+include("bfloat16.jl")
 include("problems.jl")
 include("configurations.jl")
 include("benchmark.jl")
