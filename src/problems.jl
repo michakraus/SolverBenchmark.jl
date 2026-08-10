@@ -141,8 +141,19 @@ defaults; the native time span is `(0, 10)` with the standard `Δt = 0.01`
 Because the double pendulum's forces are `O(g m l)`, its nonlinear residual
 bottoms out around `10² eps(T)` rather than `eps(T)`, so the solver's residual
 tolerance is relaxed to `256 eps(T)` (`f_abstol_factor = 256`); with the default
-`8 eps(T)` even a fully solved step is reported as non-converged (and at
-`Float32` no configuration converges at all).
+`8 eps(T)` even a fully solved step is reported as non-converged.
+
+That floor is a property of the problem's scale, not of the precision: measured,
+the residual bottoms out at `≈200 … 260 eps(T)` at **every** precision (`BFloat16`
+1.2–1.5, `Float16` 0.19–0.25, `Float32` 2.8e-5–3.1e-5, `Float64` 5.0e-14–5.7e-14).
+A precision-dependent factor would therefore have nothing to compensate for, and
+tightening it for the 16-bit formats only turns "converged at the floor" into
+"failed": at `f_abstol_factor = 8`, `BFloat16` and `Float16` converge in 0 of 24
+runs at `Δt = 0.01`, against 5 and 11 at `256`. See `scripts/f_abstol_study.jl`.
+
+Note the flip side at low precision: `256 eps(BFloat16)` is `2.0`, comparable to
+the energy itself, so a `BFloat16` row here reports convergence against a target
+too loose to be informative. [`summary_table`](@ref) flags such rows.
 """
 function double_pendulum_spec(; q₀ = DoublePendulum.θ₀, p₀ = DoublePendulum.p₀,
                                 timespan = (0.0, 10.0), timestep = 0.01)
@@ -169,10 +180,16 @@ and `p` (and on `N`, which the energy closure captures). No closed-form solution
 exists; accuracy is assessed through the energy drift.
 
 The native time span `(0, 120)` is shortened to `(0, 100)` with the standard
-`Δt = 0.1`; a coarse `Δt = 1.0` is used as a second scenario. As for the double
-pendulum the residual tolerance is relaxed to `256 eps(T)`
-(`f_abstol_factor = 256`), which also lets more configurations converge at
-`Float16`.
+`Δt = 0.1`; a coarse `Δt = 1.0` is used as a second scenario.
+
+Unlike the double pendulum this spec keeps the framework's default residual
+tolerance. It used to relax it to `256 eps(T)` as well, but measured, that bought
+3 converged runs of 96 at `Δt = 0.1` and 1 at `Δt = 1.0` while costing one to two
+orders of magnitude of residual on every run that converged either way (`Float64`
+worst case `1.8e-15` → `5.7e-14`, `Float32` `9.5e-7` → `3.1e-5`), and the extra
+runs it admitted stopped at a residual of `≈0.19` rather than `≈0.008`. The Toda
+lattice simply does not have the double pendulum's raised residual floor. See
+`scripts/f_abstol_study.jl`.
 """
 function toda_lattice_spec(; N = 16, μ = 0.3, timespan = (0.0, 100.0), timestep = 0.1)
     builder = function (T)
@@ -185,5 +202,5 @@ function toda_lattice_spec(; N = 16, μ = 0.3, timespan = (0.0, 100.0), timestep
 
     energy = (t, q, p, params) -> TodaLattice.hamiltonian(t, q, p, params, N)
 
-    ProblemSpec("TodaLattice", builder, energy, nothing; f_abstol_factor = 256)
+    ProblemSpec("TodaLattice", builder, energy, nothing)
 end
