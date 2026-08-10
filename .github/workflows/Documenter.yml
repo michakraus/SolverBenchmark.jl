@@ -81,12 +81,19 @@ jobs:
       # Julia dies here intermittently with a silent SIGABRT — exit 134, `Aborted (core
       # dumped)`, no exception and no stack trace, not even under a pty.
       #
-      # It correlates with the runner's CPU vendor. Over one full run: 2 of the 3 jobs that
-      # landed on Intel died — a Xeon Platinum 8573C (`sapphirerapids`) and a Xeon 6973P-C
-      # (`graniterapids`) — and 0 of the 15 on AMD (`znver3`/`znver4`) did. That is why
-      # retrying on the same runner cannot help, and why the sweep that fails differs from
-      # run to run: it is the draw of the runner, not the sweep. It also never reproduces
-      # locally, on arm64.
+      # It correlates with the runner's microarchitecture, not with the sweep. Over two
+      # full runs, by `ORCJIT` target:
+      #
+      #   znver5 (EPYC 9V45)          3 aborted   0 passed
+      #   graniterapids (Xeon 6973P)  2 aborted   0 passed
+      #   sapphirerapids (Xeon 8573C) 2 aborted   1 passed
+      #   znver4 (EPYC 9V74)          0 aborted   6 passed
+      #   znver3 (EPYC 7763)          0 aborted   9 passed
+      #
+      # So it is the three newest cores in the fleet that die, across both vendors — an
+      # earlier reading of a single run as "Intel" was over-fitted. This is why retrying on
+      # the same runner cannot help, and why the sweep that fails differs run to run: the
+      # runner draw decides. It never reproduces locally, on arm64.
       #
       # These diagnostics are what established that, and are kept so the correlation can be
       # rechecked as the fleet changes.
@@ -115,15 +122,25 @@ jobs:
 
           if run_sweep; then exit 0; fi
 
-          echo "::warning::${{ matrix.id }}: aborted, retrying with OPENBLAS_NUM_THREADS=1"
-          if ( export OPENBLAS_NUM_THREADS=1; run_sweep ); then
-            echo "::warning::${{ matrix.id }}: passed with OPENBLAS_NUM_THREADS=1 — BLAS threading implicated"
+          # OpenBLAS kernel dispatch. `OPENBLAS_NUM_THREADS=1` was tried and changed
+          # nothing, but it only affects threading; `OPENBLAS_CORETYPE` decides which
+          # kernel family is selected, which is the part that has to recognise a
+          # microarchitecture it may be older than.
+          echo "::warning::${{ matrix.id }}: aborted, retrying with OPENBLAS_CORETYPE=Haswell"
+          if ( export OPENBLAS_CORETYPE=Haswell; run_sweep ); then
+            echo "::warning::${{ matrix.id }}: passed with OPENBLAS_CORETYPE=Haswell — OpenBLAS kernel dispatch implicated"
             exit 0
           fi
 
-          echo "::warning::${{ matrix.id }}: still aborting, retrying with JULIA_CPU_TARGET=generic"
-          if ( export JULIA_CPU_TARGET=generic; run_sweep ); then
-            echo "::warning::${{ matrix.id }}: passed with JULIA_CPU_TARGET=generic — host code generation implicated"
+          # Julia's own code generation. The target must be set *before* precompilation:
+          # setting it only for the run reuses the pkgimages already built for the native
+          # target, so nothing is tested — which is exactly how the previous version of
+          # this fallback fooled itself into reporting code generation as excluded.
+          echo "::warning::${{ matrix.id }}: still aborting, rebuilding for a generic CPU target"
+          if ( export JULIA_CPU_TARGET=generic
+               julia --project=docs -e 'using Pkg; Pkg.precompile()' > /dev/null 2>&1
+               run_sweep ); then
+            echo "::warning::${{ matrix.id }}: passed with JULIA_CPU_TARGET=generic — Julia code generation implicated"
             exit 0
           fi
 

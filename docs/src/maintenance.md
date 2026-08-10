@@ -59,32 +59,39 @@ Build, dependency and CI notes for this repository.
   tests; building the docs there too would duplicate hours of compute and race the other
   build for `gh-pages`.
 
-!!! warning "The sweeps abort on Intel runners"
+!!! warning "The sweeps abort on the newest CI runners"
     Julia dies mid-sweep with a silent `SIGABRT` — exit 134, `Aborted (core dumped)`, no
     exception, no stack trace, nothing on stderr even under a pty — and **it correlates
-    with the runner's CPU vendor.** Over one full run:
+    with the runner's microarchitecture, not with the sweep.** Over two full runs, by
+    `ORCJIT` target:
 
-    | | Intel | AMD |
-    |:--|--:|--:|
-    | aborted | 2 of 3 | 0 of 15 |
+    | Target | Aborted | Passed |
+    |:-------|--------:|-------:|
+    | `znver5` (EPYC 9V45) | 3 | 0 |
+    | `graniterapids` (Xeon 6973P-C) | 2 | 0 |
+    | `sapphirerapids` (Xeon 8573C) | 2 | 1 |
+    | `znver4` (EPYC 9V74) | 0 | 6 |
+    | `znver3` (EPYC 7763) | 0 | 9 |
 
-    The two that died were a Xeon Platinum 8573C (`sapphirerapids`) and a Xeon 6973P-C
-    (`graniterapids`); every job on an EPYC (`znver3`/`znver4`) passed, as does every run
-    on a local arm64 machine. Both deaths were about 30 s into `ExpandTemplates`.
+    The three newest cores in the fleet die, across both vendors; the older two never do,
+    nor does a local arm64 machine. That is why retrying on the same runner reproduces the
+    abort (66 s, then 63 s) while another job does the same work untouched, and why the
+    sweep that fails differs from run to run — the runner draw decides.
 
-    That explains what looked inexplicable before it was measured: the failing sweep
-    differs from run to run because it is the *draw of the runner* that decides, not the
-    sweep — so retrying on the same runner reproduces the abort (66 s, then 63 s), while a
-    different job on a different host sails through the same work.
+    What is excluded so far: **BLAS threading** (`OPENBLAS_NUM_THREADS=1` changed nothing).
+    Still open: OpenBLAS *kernel dispatch*, which has to recognise a core it may be older
+    than, and Julia's code generation for these targets. The `Compute the sweeps` step
+    narrows them on each occurrence, retrying with `OPENBLAS_CORETYPE=Haswell` and then
+    with `JULIA_CPU_TARGET=generic`, and annotating which one let the sweep through.
 
-    The cause below that is not yet identified. The `Compute the sweeps` step therefore
-    narrows it on each occurrence: after an abort it retries with
-    `OPENBLAS_NUM_THREADS=1`, then with `JULIA_CPU_TARGET=generic`, and annotates the run
-    with which one let the sweep through — BLAS threading or host code generation. Until
-    an Intel job trips it again there is nothing to read.
+    !!! note "A CPU-target fallback must precompile"
+        `JULIA_CPU_TARGET` set only for the run reuses the pkgimages already built for the
+        native target, so it tests nothing and quietly reports "not the cause". The
+        fallback runs `Pkg.precompile()` under the new target first. The tell is timing: a
+        genuine rebuild takes minutes, not the twenty seconds a reused image takes.
 
-    A run that aborts under all three withholds the deployment. Re-running that single job
-    is the cheap way through: a few minutes, and it will likely land on a different host.
+    A run that aborts under everything withholds the deployment. Re-running that single job
+    is the cheap way through: a few minutes, and it will likely land on an older host.
 - **Documenter inlines figures as base64**, so several figures per page comfortably
   exceed the default page-size limit. `size_threshold` (and
   `size_threshold_warn`) are raised in the `Documenter.HTML` block of
