@@ -25,7 +25,9 @@ fast timing pass. See the driver script `scripts/midpoint_toda_lattice.jl` for a
 using SolverBenchmark
 
 spec = toda_lattice_spec(timespan = (0.0, 100.0), timestep = 0.1)
-df   = run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+df   = cached_sweep("toda_lattice_dt0.1") do
+    run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```
@@ -87,7 +89,9 @@ stresses the solvers more than the ``\Delta t = 0.1`` results above.
 
 ```@example toda
 spec1 = toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0)
-df1   = run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+df1   = cached_sweep("toda_lattice_dt1.0") do
+    run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```

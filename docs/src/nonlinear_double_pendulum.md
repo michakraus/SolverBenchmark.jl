@@ -18,8 +18,10 @@ distinguished by colour. Results are shown at
 using SolverBenchmark
 
 spec = double_pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)
-df   = run_nonlinear_benchmark(spec; timing = :quick, max_iterations = 100,
-                               verbose = false, quiet = true)
+df   = cached_sweep("nonlinear_double_pendulum_dt0.1") do
+    run_nonlinear_benchmark(spec; timing = :quick, max_iterations = 100,
+                            verbose = false, quiet = true)
+end
 
 nothing # hide
 ```
@@ -77,8 +79,10 @@ markdown_table(summary_table(df; panelcol = :regularization))
 
 ```@example nldp
 spec1 = double_pendulum_lode_spec(timespan = (0.0, 10.0), timestep = 1.0)
-df1   = run_nonlinear_benchmark(spec1; timing = :quick, max_iterations = 100,
-                                verbose = false, quiet = true)
+df1   = cached_sweep("nonlinear_double_pendulum_dt1.0") do
+    run_nonlinear_benchmark(spec1; timing = :quick, max_iterations = 100,
+                            verbose = false, quiet = true)
+end
 nothing # hide
 ```
 
@@ -94,8 +98,10 @@ markdown_table(summary_table(df1; panelcol = :regularization))
 
 ```@example nldp
 spec10 = double_pendulum_lode_spec(timespan = (0.0, 100.0), timestep = 10.0)
-df10   = run_nonlinear_benchmark(spec10; timing = :quick, max_iterations = 100,
-                                 verbose = false, quiet = true)
+df10   = cached_sweep("nonlinear_double_pendulum_dt10.0") do
+    run_nonlinear_benchmark(spec10; timing = :quick, max_iterations = 100,
+                            verbose = false, quiet = true)
+end
 nothing # hide
 ```
 

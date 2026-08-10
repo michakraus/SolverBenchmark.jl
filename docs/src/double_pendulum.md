@@ -26,7 +26,9 @@ fast timing pass. See the driver script `scripts/midpoint_double_pendulum.jl` fo
 using SolverBenchmark
 
 spec = double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.01)
-df   = run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+df   = cached_sweep("double_pendulum_dt0.01") do
+    run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```
@@ -86,7 +88,9 @@ stresses the solvers noticeably more than the ``\Delta t = 0.01`` results above.
 
 ```@example dp
 spec1 = double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.1)
-df1   = run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+df1   = cached_sweep("double_pendulum_dt0.1") do
+    run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```

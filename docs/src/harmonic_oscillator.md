@@ -16,7 +16,9 @@ standard step ``\Delta t = 0.1`` and then repeated for a coarse step
 using SolverBenchmark
 
 spec = harmonic_oscillator_spec(timespan = (0.0, 100.0), timestep = 0.1)
-df   = run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+df   = cached_sweep("harmonic_oscillator_dt0.1") do
+    run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```
@@ -113,7 +115,9 @@ main effect is on `Picard` (many more iterations) and on the energy drift.
 
 ```@example ho
 spec1 = harmonic_oscillator_spec(timespan = (0.0, 100.0), timestep = 1.0)
-df1   = run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+df1   = cached_sweep("harmonic_oscillator_dt1.0") do
+    run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```

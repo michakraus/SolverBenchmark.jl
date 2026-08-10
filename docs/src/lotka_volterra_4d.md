@@ -17,7 +17,9 @@ timing pass. See the driver script `scripts/midpoint_lotka_volterra_4d.jl` for a
 using SolverBenchmark
 
 spec = lotka_volterra_4d_spec()
-df   = run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+df   = cached_sweep("lotka_volterra_4d_dt0.01") do
+    run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```
@@ -83,7 +85,9 @@ system the converging solvers need more iterations (≈ 3.4 per step instead of
 
 ```@example lv4
 spec1 = lotka_volterra_4d_spec(timespan = (0.0, 10.0), timestep = 0.1)
-df1   = run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+df1   = cached_sweep("lotka_volterra_4d_dt0.1") do
+    run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```

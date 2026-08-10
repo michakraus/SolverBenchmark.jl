@@ -3,6 +3,7 @@ module SolverBenchmark
 using BenchmarkTools
 using BFloat16s
 using CairoMakie
+using CSV
 using DataFrames
 using Logging
 using Printf
@@ -50,6 +51,7 @@ export relu_k, gelu, elu
 # running the benchmark
 export run_case, run_benchmark
 export run_nonlinear_case, run_nonlinear_benchmark
+export cached_sweep, sweep_cache_dir
 
 # post-processing
 export summary_table, markdown_table
@@ -60,6 +62,7 @@ include("problems.jl")
 include("configurations.jl")
 include("benchmark.jl")
 include("nonlinear.jl")
+include("cache.jl")
 include("plots.jl")
 
 end

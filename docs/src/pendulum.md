@@ -15,7 +15,9 @@ fast timing pass. See the driver script `scripts/midpoint_pendulum.jl` for accur
 using SolverBenchmark
 
 spec = pendulum_spec(timespan = (0.0, 100.0), timestep = 0.1)
-df   = run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+df   = cached_sweep("pendulum_dt0.1") do
+    run_benchmark(spec; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```
@@ -83,7 +85,9 @@ configuration still converges.
 
 ```@example pendulum
 spec1 = pendulum_spec(timespan = (0.0, 100.0), timestep = 1.0)
-df1   = run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+df1   = cached_sweep("pendulum_dt1.0") do
+    run_benchmark(spec1; timing = :quick, verbose = false, quiet = true)
+end
 
 nothing # hide
 ```
