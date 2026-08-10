@@ -1,4 +1,8 @@
-const _PRECISION_ORDER = ["Float16", "Float32", "Float64"]
+# Display order for the precisions (colours/legend in the comparison figures, rows
+# in the convergence map, leading sort key in the tables). The two 16-bit formats
+# come first, `BFloat16` before `Float16`; the order is by significand width, which
+# is what sets the attainable residual.
+const _PRECISION_ORDER = ["BFloat16", "Float16", "Float32", "Float64"]
 
 # Display order for the initial guesses (panels/rows in the plots and tables).
 const _INITIAL_GUESS_ORDER = ["NoInitialGuess", "HermiteExtrapolation", "MidpointExtrapolation"]
@@ -9,6 +13,13 @@ function _ordered(values, order)
     present = unique(values)
     vcat([v for v in order if v in present], [v for v in present if v ∉ order])
 end
+
+# A converged run whose residual is this close to the tolerance it was solved to
+# stopped *at* the target rather than comfortably below it. That is unremarkable
+# in itself (`Bisection` does it by design), but it is the only thing separating a
+# genuine solve from one that merely met a target too loose to be informative —
+# `256 eps(BFloat16)` is `2.0`, on problems whose energy is `O(1)`.
+const _AT_TOLERANCE_MARGIN = 10
 
 """
     summary_table(df; panelcol = :initial_guess, panel_order = _INITIAL_GUESS_ORDER,
@@ -24,11 +35,20 @@ precision and solver (`:initial_guess` for the implicit-midpoint sweep,
 `:regularization` for the nonlinear-integrator sweep); `panel_order` gives its
 preferred display order (values not listed are appended in first-appearance
 order).
+
+A converged row whose `max_residual` is within a factor of
+$(_AT_TOLERANCE_MARGIN) of the `f_abstol` it was solved to is marked in an
+`at_tolerance` column, so that "converged against a target too loose to mean
+much" travels with the data instead of having to be remembered. The column
+appears only if `df` carries the `f_abstol` column that `run_case` records, and
+with `drop_empty = true` only if at least one row is flagged.
 """
 function summary_table(df::DataFrame; panelcol::Symbol = :initial_guess,
                        panel_order = _INITIAL_GUESS_ORDER, drop_empty::Bool = true)
     cols = [:precision, :solver_label, panelcol, :converged,
-            :iterations_mean, :runtime_s, :max_residual, :energy_drift, :accuracy]
+            :iterations_mean, :runtime_s, :max_residual, :at_tolerance,
+            :energy_drift, :accuracy]
+    df = _flag_at_tolerance(df)
     out = select(df, intersect(cols, propertynames(df)))
 
     porder = Dict(p => i for (i, p) in enumerate(_PRECISION_ORDER))
@@ -42,8 +62,23 @@ function summary_table(df::DataFrame; panelcol::Symbol = :initial_guess,
         for c in names(out)
             all(ismissing, out[!, c]) && select!(out, Not(c))
         end
+        # unlike the metric columns this one is never `missing`; it earns its width
+        # only when it has something to say
+        "at_tolerance" in names(out) && !any(out.at_tolerance) && select!(out, Not(:at_tolerance))
     end
     out
+end
+
+# Add the `at_tolerance` flag if the input carries the tolerance each run used.
+# Benchmarks produced before `f_abstol` was recorded simply pass through.
+function _flag_at_tolerance(df::DataFrame)
+    :at_tolerance in propertynames(df) && return df
+    all(in(propertynames(df)), (:f_abstol, :max_residual, :converged)) || return df
+    flag = map(eachrow(df)) do r
+        r.converged && !ismissing(r.max_residual) &&
+            r.max_residual ≥ r.f_abstol / _AT_TOLERANCE_MARGIN
+    end
+    insertcols(df, :at_tolerance => flag)   # non-mutating: the caller's frame is untouched
 end
 
 _fmt_cell(::Missing) = "—"
@@ -197,7 +232,9 @@ function plot_convergence(df::DataFrame; title::AbstractString = "",
     solvers = unique(df.solver_label)
     precs   = filter(p -> p in df.precision, _PRECISION_ORDER)
 
-    fig = Figure(size = (340 * length(igs) + 180, 340))
+    # the heatmap has one row per precision, so grow the figure with `precs`
+    # rather than letting the rows squeeze (250 + 30·3 = 340, the former height)
+    fig = Figure(size = (340 * length(igs) + 180, 250 + 30 * length(precs)))
     for (j, ig) in enumerate(igs)
         ax = Axis(fig[1, j];
             title = ig,

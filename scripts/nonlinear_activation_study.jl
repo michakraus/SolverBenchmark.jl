@@ -53,7 +53,7 @@ method_builder(activation, seed) =
 # iterations. `missing` sorts last.
 _rank_num(x) = ismissing(x) ? Inf : Float64(x)
 
-const _PRECISION_RANK = Dict("Float16" => 1, "Float32" => 2, "Float64" => 3)
+const _PRECISION_RANK = Dict("BFloat16" => 1, "Float16" => 2, "Float32" => 3, "Float64" => 4)
 
 """
     best_rows(df)

@@ -15,7 +15,7 @@ using Test
         @test count(c -> c.solver_name == "Newton", cfgs) == 6
         @test count(c -> c.linesearch === nothing, cfgs) == 2   # DogLeg, Picard
         @test solver_label(cfgs[1]) == "Newton/Static"
-        @test default_precisions() == (Float16, Float32, Float64)
+        @test default_precisions() == (BFloat16, Float16, Float32, Float64)
         @test length(default_initial_guesses()) == 3
     end
 
@@ -45,11 +45,15 @@ using Test
         spec    = harmonic_oscillator_spec(timespan = (0.0, 1.0))
         scfg    = default_solver_configs()[2]          # Newton/Backtracking
         hermite = first(default_initial_guesses())
-        for T in (Float16, Float32)
+        for T in (BFloat16, Float16, Float32)
             row = run_case(spec, T, scfg, hermite; timing = :none, quiet = true)
-            @test row.precision == string(T)
+            # `nameof`, not `string`: the label has to be unqualified wherever it
+            # is produced, because the plotting code matches it against
+            # `_PRECISION_ORDER` and silently drops rows that do not match.
+            @test row.precision == string(nameof(T))
             @test row.converged                        # linear problem converges at every precision
         end
+        @test precision_label(BFloat16) == "BFloat16"
     end
 
     @testset "run_benchmark — full grid for one precision/guess" begin
@@ -64,6 +68,36 @@ using Test
 
         st = summary_table(df)
         @test nrow(st) == 8
+
+        # `Bisection` stops as soon as `f_abstol` is met while the other line
+        # searches overshoot it by two to three orders of magnitude, so on this
+        # problem the flag picks out exactly the solvers that stop at the target.
+        @test "at_tolerance" in names(st)
+        @test st.at_tolerance[st.solver_label .== "Newton/Bisection"] == [true]
+        @test st.at_tolerance[st.solver_label .== "Newton/Backtracking"] == [false]
+    end
+
+    @testset "at_tolerance flags a residual sitting at the target" begin
+        # The double pendulum's residual floor is ≈200 eps(T) at every precision,
+        # so with `f_abstol_factor = 256` every converged run stops *at* the
+        # target rather than below it — which is exactly what the flag is for.
+        spec = double_pendulum_spec(timespan = (0.0, 1.0), timestep = 0.01)
+        df = run_benchmark(spec; precisions = (Float64,),
+                           solver_configs = default_solver_configs()[1:2],
+                           initial_guesses = default_initial_guesses()[1:1],
+                           timing = :none, verbose = false, quiet = true)
+        @test "f_abstol" in names(df)
+        @test all(df.f_abstol .== 256 * eps(Float64))
+
+        st = summary_table(df)
+        @test "at_tolerance" in names(st)
+        @test all(st.at_tolerance)
+
+        # a run is flagged only when it converged *and* landed within a factor of
+        # ten of its tolerance
+        loose = copy(df)
+        loose.max_residual .= df.f_abstol ./ 1000
+        @test "at_tolerance" ∉ names(summary_table(loose))
     end
 
     @testset "run_case — pendulum has no analytic reference" begin
@@ -170,6 +204,13 @@ using Test
         # reduced precision: with the default `8 eps(T)` the double pendulum's
         # residual floor is unreachable and *no* configuration converges at
         # Float32. Guard that a robust config still converges there.
+        # The Toda lattice used to carry the same override; measured, it bought
+        # 3 runs of 96 while costing one to two orders of magnitude of residual,
+        # so it now uses the framework default (see scripts/f_abstol_study.jl).
+        @testset "Toda lattice uses the framework default tolerance" begin
+            @test toda_lattice_spec().f_abstol_factor == 8
+        end
+
         @testset "double pendulum converges at Float32 (relaxed f_abstol)" begin
             @test double_pendulum_spec().f_abstol_factor == 256
             spec = double_pendulum_spec(timespan = (0.0, 1.0), timestep = 0.01)
@@ -207,24 +248,45 @@ using Test
 
         @testset "precision sweep runs and records rows" begin
             df = run_nonlinear_benchmark(spec;
-                precisions = (Float64, Float32, Float16),
+                precisions = (Float64, Float32, Float16, BFloat16),
                 solver_configs = nonlinear_solver_configs()[[2, 4]],     # Newton/Backtracking, DogLeg
                 regularization_factors = [0.0, 1e-5],
                 method_builder = T -> nonlinear_onelayer_method(T; dict_amount = 100),
                 timing = :none, verbose = false, quiet = true)
 
-            @test nrow(df) == 12                                         # 3 × 2 × 2
+            @test nrow(df) == 16                                         # 4 × 2 × 2
             @test all(in(names(df)), ["converged", "iterations_mean", "runtime_s",
                                       "energy_drift", "accuracy", "solver_label", "regularization"])
-            # Float64 with regularization converges; Float16 fails gracefully
-            # (singular Jacobian caught and recorded as a non-converged row)
+            # Float64 with regularization converges; both 16-bit formats fail
+            # gracefully (singular Jacobian caught and recorded as non-converged
+            # rows). BFloat16 fails for want of significand bits, not range: its
+            # exponent is as wide as Float32's.
             f64 = df[(df.precision .== "Float64") .& (df.regularization .== "λ = 1e-5"), :]
             @test all(f64.converged)
-            f16 = df[df.precision .== "Float16", :]
-            @test nrow(f16) == 4 && !any(f16.converged)
+            for p in ("Float16", "BFloat16")
+                low = df[df.precision .== p, :]
+                @test nrow(low) == 4 && !any(low.converged)
+            end
 
             st = summary_table(df; panelcol = :regularization)
             @test "regularization" in names(st)
+        end
+
+        @testset "a failing method build degrades to non-converged rows" begin
+            # The network is built once per precision, outside the per-case error
+            # handling, so a precision the constructor cannot handle must not
+            # abort the whole sweep.
+            df = run_nonlinear_benchmark(spec;
+                precisions = (Float64,),
+                solver_configs = nonlinear_solver_configs()[[2, 4]],
+                regularization_factors = [0.0, 1e-5],
+                method_builder = T -> error("no integrator at $T"),
+                timing = :none, verbose = false, quiet = true)
+
+            @test nrow(df) == 4                                          # 1 × 2 × 2
+            @test !any(df.converged)
+            @test all(ismissing, df.max_residual)
+            @test Set(df.solver_label) == Set(["Newton/Backtracking", "DogLeg"])
         end
 
         # the other problems in the study (Lotka–Volterra is excluded — its

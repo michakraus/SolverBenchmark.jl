@@ -215,6 +215,22 @@ nonlinear_regularization_factors() = [0.0, 1e-3, 1e-5, 1e-7]
 regularization_label(λ) =
     λ == 0 ? "λ = 0" : "λ = " * replace((@sprintf "%.0e" λ), "e-0" => "e-", "e+0" => "e")
 
+# The identifying columns of a nonlinear-benchmark row, and the row recorded when
+# a combination cannot be run at all. Shared by `run_nonlinear_case` (which fails
+# per case) and `run_nonlinear_benchmark` (which fails per precision, when the
+# network itself cannot be built), so that both produce the same schema.
+_nonlinear_row_base(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ::Real) where {T} =
+    (problem = spec.name, precision = precision_label(T),
+     solver = scfg.solver_name, linesearch = scfg.linesearch_name,
+     solver_label = solver_label(scfg), regularization = regularization_label(λ),
+     f_abstol = Float64(spec.f_abstol_factor * eps(T)))
+
+_nonlinear_missing_row(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ::Real) where {T} =
+    (; _nonlinear_row_base(spec, T, scfg, λ)..., converged = false,
+     iterations_total = missing, iterations_mean = missing,
+     runtime_s = missing, max_residual = missing,
+     energy_drift = missing, accuracy = missing)
+
 """
     run_nonlinear_case(spec, T, scfg, λ, method; timing = :quick,
                        max_iterations = 1000, quiet = false)
@@ -229,14 +245,8 @@ function run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ
                             timing::Symbol = :quick, max_iterations::Integer = 1000,
                             quiet::Bool = false) where {T}
 
-    base = (problem = spec.name, precision = string(T),
-            solver = scfg.solver_name, linesearch = scfg.linesearch_name,
-            solver_label = solver_label(scfg), regularization = regularization_label(λ))
-
-    missing_row = (; base..., converged = false,
-                   iterations_total = missing, iterations_mean = missing,
-                   runtime_s = missing, max_residual = missing,
-                   energy_drift = missing, accuracy = missing)
+    base = _nonlinear_row_base(spec, T, scfg, λ)
+    missing_row = _nonlinear_missing_row(spec, T, scfg, λ)
 
     _maybe_quiet(quiet) do
     try
@@ -303,7 +313,8 @@ Run the full nonlinear-integrator benchmark grid for one LODE `spec` and return
 the results as a `DataFrame`, one row per (precision × solver configuration ×
 regularization factor). The integrator `method` is built once per precision via
 `method_builder(T)` and reused across the solver/regularization sweep (building
-the network is relatively expensive).
+the network is relatively expensive). If that build fails for a precision, the
+whole block is recorded as non-converged rows instead of aborting the sweep.
 """
 function run_nonlinear_benchmark(spec::ProblemSpec;
                                  method_builder = nonlinear_onelayer_method,
@@ -317,7 +328,19 @@ function run_nonlinear_benchmark(spec::ProblemSpec;
 
     rows = Vector{Any}()
     for T in precisions
-        method = method_builder(T)
+        # The network build happens once per precision, outside the per-case
+        # error handling of `run_nonlinear_case`. Constructing the basis and the
+        # quadrature can itself fail in a low precision, so catch that here and
+        # record the whole block as non-converged rather than aborting the sweep.
+        method = try
+            method_builder(T)
+        catch err
+            quiet || @warn "building the integrator failed" problem = spec.name precision = T exception = err
+            for scfg in solver_configs, λ in regularization_factors
+                push!(rows, _nonlinear_missing_row(spec, T, scfg, λ))
+            end
+            continue
+        end
         for scfg in solver_configs, λ in regularization_factors
             verbose && @info "benchmarking" problem = spec.name precision = T solver = solver_label(scfg) regularization = λ
             push!(rows, run_nonlinear_case(spec, T, scfg, λ, method; timing, max_iterations, quiet))

@@ -31,6 +31,21 @@ solver_label(cfg::SolverConfig) =
     isempty(cfg.linesearch_name) ? cfg.solver_name : "$(cfg.solver_name)/$(cfg.linesearch_name)"
 
 """
+    precision_label(T)
+
+The name of the precision type `T` as it appears in the `precision` column of a
+benchmark `DataFrame`, e.g. `"Float64"` or `"BFloat16"`.
+
+`nameof` rather than `string`: Julia renders a type module-qualified whenever its
+module is not visible from `Main`, so `string(BFloat16)` yields
+`"BFloat16s.BFloat16"` outside a session that did `using BFloat16s` — for instance
+inside a Documenter `@example` sandbox. The plotting code matches this column
+against `_PRECISION_ORDER` by string equality and silently drops rows that do not
+match, so the label has to be independent of where it is produced.
+"""
+precision_label(::Type{T}) where {T} = string(nameof(T))
+
+"""
     default_solver_configs()
 
 Return the default list of [`SolverConfig`](@ref)s: `Newton` combined with each
@@ -89,6 +104,12 @@ default_initial_guesses() = [
     default_precisions()
 
 Return the default tuple of floating point precisions to benchmark:
-`(Float16, Float32, Float64)`.
+`(BFloat16, Float16, Float32, Float64)`.
+
+The two 16-bit formats are both swept because they trade the same 16 bits
+differently: `Float16` spends 11 bits on the significand and 5 on the exponent,
+`BFloat16` only 8 on the significand but 8 on the exponent — the same range as
+`Float32`. Sweeping both separates a failure caused by too few digits from one
+caused by too little dynamic range.
 """
-default_precisions() = (Float16, Float32, Float64)
+default_precisions() = (BFloat16, Float16, Float32, Float64)

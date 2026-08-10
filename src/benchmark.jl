@@ -131,9 +131,14 @@ function run_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, igcfg::Initi
                   method = ImplicitMidpoint(), timing::Symbol = :quick,
                   max_iterations::Integer = 100, quiet::Bool = false) where {T}
 
-    base = (problem = spec.name, precision = string(T),
+    # recorded alongside the residual so that `max_residual` can be read against the
+    # target it was actually solved to — see `summary_table`
+    f_abstol = spec.f_abstol_factor * eps(T)
+
+    base = (problem = spec.name, precision = precision_label(T),
             solver = scfg.solver_name, linesearch = scfg.linesearch_name,
-            solver_label = solver_label(scfg), initial_guess = igcfg.name)
+            solver_label = solver_label(scfg), initial_guess = igcfg.name,
+            f_abstol = Float64(f_abstol))
 
     missing_row = (; base..., converged = false,
                    iterations_total = missing, iterations_mean = missing,
@@ -145,7 +150,7 @@ function run_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, igcfg::Initi
         prob   = spec.builder(T)
         params = GIB.parameters(prob)
         int    = _build_integrator(prob, method, scfg, igcfg.build(), T;
-                                   max_iterations, f_abstol = spec.f_abstol_factor * eps(T))
+                                   max_iterations, f_abstol)
 
         # one representative run for the solver/accuracy metrics
         res = _drive!(int, prob)
