@@ -92,8 +92,13 @@ jobs:
           lscpu | grep -E "^(Model name|Vendor ID|CPU\(s\)|Flags)" | cut -c1-200
           echo "--- memory"
           free -g
+      # Run under a pty. Julia buffers `stdout`/`stderr` when they are pipes, as they are
+      # here, so anything written just before the abort is still in that buffer when the
+      # process dies and is lost — which is very likely why this crash has looked
+      # message-less. `script` gives it a terminal, so output is line-buffered and survives;
+      # `-e` propagates the command's exit status instead of `script`'s.
       - name: Compute the sweeps
-        run: julia --project=docs docs/make.jl
+        run: script -q -e -c "julia --project=docs docs/make.jl" /dev/null
         env:
           DOCS_PAGES: ${{ matrix.page }}.md
           SOLVERBENCHMARK_SWEEPS: ${{ matrix.sweeps }}
@@ -151,8 +156,10 @@ jobs:
         run: |
           ls -la sweepcache
           echo "collected $(ls sweepcache/*.csv 2>/dev/null | wc -l) sweeps (expected 24)"
+      # Under a pty for the same reason as the sweep jobs: this build aborted once too,
+      # recomputing a sweep that no job had produced, and buffered output would be lost.
       - name: Build and deploy
-        run: julia --project=docs docs/make.jl
+        run: script -q -e -c "julia --project=docs docs/make.jl" /dev/null
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
