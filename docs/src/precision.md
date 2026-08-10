@@ -165,7 +165,7 @@ useful shift in double precision over-damps half precision several times over:
 reduced-precision ladder, rung 2 on the `Float64` one — so each ladder is anchored on a
 shift already known to work and probes octaves either side of it. See
 [`scaled_regularization`](@ref) and [`regularization_exponent`](@ref); what the ladder
-measured is in [Findings](@ref).
+measured is in [Key Findings](@ref).
 
 **The panels are labelled by rung, not by value.** One benchmark `DataFrame` holds all
 four precisions and every plot and table groups on that label; since the two ladders
