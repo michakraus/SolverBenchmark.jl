@@ -20,14 +20,20 @@ times coarser step. The following options are swept:
 
 | Dimension | Values |
 |:----------|:-------|
-| Precision | `Float16`, `Float32`, `Float64` |
+| Precision | `BFloat16`, `Float16`, `Float32`, `Float64` |
 | Solver | `Newton`, `DogLeg`, `Picard` |
 | Line search (Newton only) | `Static`, `Backtracking`, `Bisection`, `Quadratic`, `BierlaireQuadratic`, `StrongWolfe` |
 | Initial guess | `HermiteExtrapolation`, `MidpointExtrapolation`, `NoInitialGuess` (previous step) |
 
 This yields eight solver configurations (six Newton line searches plus `DogLeg`
-and `Picard`) times three precisions times three initial guesses — 72 runs per
+and `Picard`) times four precisions times three initial guesses — 96 runs per
 problem.
+
+Both 16-bit formats are swept because they divide the same 16 bits differently:
+`Float16` keeps 11 significand bits and a 5-bit exponent, `BFloat16` only 8
+significand bits but an 8-bit exponent — the same dynamic range as `Float32`.
+Running both separates a failure caused by too few digits from one caused by
+overflow or underflow.
 
 For every run the harness records whether the solver converged, the mean number
 of nonlinear iterations per time step, the run time, the residual, and — as an
@@ -40,7 +46,7 @@ A second experiment set uses the neural-network variational integrator
 instead of implicit midpoint. Because that integrator's nonlinear system is
 near-singular, the sweep varies the solver's **regularization factor**
 ``\lambda \in \{0, 10^{-3}, 10^{-5}, 10^{-7}\}`` (in place of the initial guess)
-across the three precisions and a reduced set of four solver configurations
+across the four precisions and a reduced set of four solver configurations
 (`Newton/Static`, `Newton/Backtracking`, `Newton/StrongWolfe`, `DogLeg`), at the
 step sizes ``\Delta t = 0.1, 1.0, 10.0`` (ten steps each).
 
@@ -76,33 +82,22 @@ degenerate Lagrangians are not currently supported by `NonLinear_OneLayer_GML`.
 
 ## Key findings
 
-- **`Newton` with a robust line search, and `DogLeg`, are the most efficient**:
-  one iteration per step on the (linear) oscillator, about two on the pendulum.
-- **The oscillator and the pendulum are solved by every configuration**: all 72
-  runs converge at both time steps, for all three precisions, all eight solver
-  configurations and all three initial guesses.
-- **All six line searches are comparably robust**, and so is `DogLeg`. Over the
-  twelve implicit-midpoint sweeps (108 runs each): `Bisection` 106, `DogLeg` 100,
-  `StrongWolfe` 99, `Static` 98, `Backtracking` 98, `BierlaireQuadratic` 98,
-  `Quadratic` 95 — against `Picard` at 39. The choice between line searches
-  matters far less than the choice of solver.
-- **`Picard` is slow where it works and fails where it does not**: on the
-  oscillator and pendulum it converges but needs many iterations (≈ 8 to 30 per
-  step) and is the most guess-sensitive; on the non-canonical Lotka–Volterra
-  `iodeproblem`s and on the double pendulum it **never converges** (0/9 in every
-  sweep).
-- **`Bisection` stops at the tolerance it was asked for**, where the others
-  overshoot it. Its residual lands right at `f_abstol` (`8 eps(T)`: ≈ `1e-6` at
-  `Float32`, ≈ `2e-15` at `Float64`), while the remaining line searches happen to
-  drive the residual one to two orders of magnitude below the requested tolerance.
-  Read the residual columns against `f_abstol`, not against each other.
-- **`MidpointExtrapolation` tends to give the best initial guess** (fewest Picard
-  iterations); `NoInitialGuess` (reuse of the previous step) the worst.
-- **Precision sets the achievable accuracy** (energy drift ≈ `1e-17`, `1e-8`,
-  `1e-4` for `Float64`, `Float32`, `Float16`), while the discretization error is
-  precision-independent.
-- **Larger time steps** increase iteration counts and cause more line-search
-  failures.
+The [Key Findings](@ref) page collects what the two experiment sets measured. In
+brief:
+
+- **`Newton` with a robust line search, and `DogLeg`, are the most efficient**, at
+  about 1.15 iterations per step on the oscillator and pendulum. All six line
+  searches are comparably robust; the choice between them matters far less than the
+  choice of solver, and `Picard` is the outlier that fails outright on four of the
+  six problems.
+- **Precision sets the achievable accuracy**, and `Float32` already reaches the
+  ``\mathcal{O}(\Delta t^2)`` discretization error.
+- **The two 16-bit formats show that the low-precision failures are about
+  significand bits, not exponent range**: `BFloat16` never beats `Float16` where the
+  comparison is clean, despite its `Float32`-sized exponent. It has a separate
+  limitation of its own — it cannot resolve a fine time grid.
+- **`Bisection` stops at the tolerance it was asked for** while the others overshoot
+  it, so residuals must be read against `f_abstol` rather than against each other.
 
 ## Reproducing the results
 

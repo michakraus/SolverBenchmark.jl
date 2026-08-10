@@ -31,7 +31,13 @@ makedocs(;
             "Double Pendulum" => "nonlinear_double_pendulum.md",
             "Toda Lattice" => "nonlinear_toda_lattice.md",
         ],
+        "Key Findings" => "findings.md",
         "API" => "api.md",
+        "Development" => [
+            "Internals" => "internals.md",
+            "Low-Precision Support" => "precision.md",
+            "Maintenance" => "maintenance.md",
+        ],
     ],
 )
 
