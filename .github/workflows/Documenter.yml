@@ -134,13 +134,18 @@ jobs:
           # half a minute later where a real precompile of this stack takes eleven
           # minutes. Get the backtrace instead and let it name the library.
           echo "::warning::${{ matrix.id }}: aborted, extracting a backtrace"
-          sudo apt-get install -y -qq gdb > /dev/null 2>&1 || true
+          ls -la /tmp/core.* 2>/dev/null || true
           core=$(ls -t /tmp/core.* 2>/dev/null | head -1)
-          if [ -n "$core" ]; then
-            gdb -batch -ex "thread apply all bt" "$(command -v julia)" "$core" 2>&1 | tail -120
-          else
+          if [ -z "$core" ]; then
             echo "no core file was written; core_pattern is $(cat /proc/sys/kernel/core_pattern)"
+            exit 134
           fi
+          # `apt-get install` alone fails on a runner with stale lists, and swallowing its
+          # output hid that as a bare `gdb: command not found` after the core had been
+          # captured — so update first and let any failure be visible.
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gdb
+          gdb -batch -ex "thread apply all bt" "$(command -v julia)" "$core" 2>&1 | tail -150
           exit 134
         env:
           DOCS_PAGES: ${{ matrix.page }}.md
