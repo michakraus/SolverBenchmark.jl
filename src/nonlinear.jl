@@ -8,7 +8,10 @@
 # The network integrator solves a near-singular nonlinear system, so a nonzero
 # `regularization_factor` (a Levenberg–Marquardt-style shift added to the Newton
 # Jacobian diagonal) is essential for convergence — which is exactly what this
-# experiment set is designed to expose.
+# experiment set is designed to expose. The shift is swept as a ladder of multiples of
+# `√eps(T)`, not as absolute numbers, because what counts as "small but not negligible"
+# is four orders of magnitude apart between `Float64` and `BFloat16`; see
+# `RegularizationConfig` and `nonlinear_regularization_factors`.
 
 # Number of dictionary neurons for the OGA initial guess. A few hundred is as
 # accurate as the reference's 400000 on the harmonic oscillator (and much faster);
@@ -204,49 +207,69 @@ nonlinear_solver_configs() = [
 """
     nonlinear_regularization_factors()
 
-Return the list of solver `regularization_factor` values swept for the nonlinear
-integrator: `[0.0, 1e-3, 1e-5, 1e-7]`.
-"""
-nonlinear_regularization_factors() = [0.0, 1e-3, 1e-5, 1e-7]
+Return the [`RegularizationConfig`](@ref)s swept for the nonlinear integrator: the
+`λ = 0` control, followed by the six rungs of the precision-scaled ladder (see
+[`scaled_regularization`](@ref)) — seven in total.
 
-# Compact panel label for a regularization factor, e.g. "λ = 0", "λ = 1e-3".
-# The benchmark sweeps λ in the innermost loop, so the labels appear in the
-# DataFrame in this order and the plots/table pick that order up automatically.
-regularization_label(λ) =
-    λ == 0 ? "λ = 0" : "λ = " * replace((@sprintf "%.0e" λ), "e-0" => "e-", "e+0" => "e")
+`λ = 0` is the control the rungs are read against. The network Newton system is
+near-singular, so the question the ladder answers is not *whether* a diagonal shift is
+needed but *how large* one has to be at a given precision — which is why the rungs are
+multiples of `√eps(T)` rather than absolute numbers: a shift small enough to be a nudge
+at `Float64` falls below the rounding error of a `Float16` Jacobian and cannot lift a
+singular one there.
+"""
+nonlinear_regularization_factors() =
+    [RegularizationConfig(0.0);
+     [scaled_regularization(rung) for rung in eachindex(_REG_EXPONENTS_LOW)]]
 
 # The identifying columns of a nonlinear-benchmark row, and the row recorded when
 # a combination cannot be run at all. Shared by `run_nonlinear_case` (which fails
 # per case) and `run_nonlinear_benchmark` (which fails per precision, when the
 # network itself cannot be built), so that both produce the same schema.
-_nonlinear_row_base(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ::Real) where {T} =
+#
+# `regularization` is a rung label rather than a value, so the exponent and the value
+# it resolves to at `T` are recorded alongside it — the same reason `f_abstol` is
+# recorded next to `max_residual`. The exponent is `missing` for a fixed-value config,
+# which has no rung.
+function _nonlinear_row_base(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig,
+                             reg::RegularizationConfig) where {T}
     (problem = spec.name, precision = precision_label(T),
      solver = scfg.solver_name, linesearch = scfg.linesearch_name,
-     solver_label = solver_label(scfg), regularization = regularization_label(λ),
+     solver_label = solver_label(scfg), regularization = reg.name,
+     regularization_exponent = reg.rung === nothing ? missing :
+                               regularization_exponent(T, reg.rung),
+     regularization_factor = Float64(reg.factor(T)),
      f_abstol = Float64(spec.f_abstol_factor * eps(T)))
+end
 
-_nonlinear_missing_row(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ::Real) where {T} =
-    (; _nonlinear_row_base(spec, T, scfg, λ)..., converged = false,
+_nonlinear_missing_row(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig,
+                       reg::RegularizationConfig) where {T} =
+    (; _nonlinear_row_base(spec, T, scfg, reg)..., converged = false,
      iterations_total = missing, iterations_mean = missing,
      runtime_s = missing, max_residual = missing,
      energy_drift = missing, accuracy = missing)
 
 """
-    run_nonlinear_case(spec, T, scfg, λ, method; timing = :quick,
+    run_nonlinear_case(spec, T, scfg, reg, method; timing = :quick,
                        max_iterations = 1000, quiet = false)
 
 Run a single nonlinear-integrator benchmark combination: integrate the LODE
-`spec` at precision `T` with solver configuration `scfg`, regularization factor
-`λ`, and the prebuilt integrator `method`. Uses the integrator's own initial
-guess (no `initialguess` is passed). Returns a `NamedTuple` row of metrics with a
-`regularization` panel label; see [`run_case`](@ref) for the `timing` semantics.
+`spec` at precision `T` with solver configuration `scfg`, regularization
+configuration `reg`, and the prebuilt integrator `method`. Uses the integrator's own
+initial guess (no `initialguess` is passed). Returns a `NamedTuple` row of metrics
+with a `regularization` panel label; see [`run_case`](@ref) for the `timing`
+semantics.
+
+`reg` is a [`RegularizationConfig`](@ref), so the factor is resolved at `T`. A bare
+`Real` is also accepted and means the same factor at every precision.
 """
-function run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ::Real, method;
+function run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig,
+                            reg::RegularizationConfig, method;
                             timing::Symbol = :quick, max_iterations::Integer = 1000,
                             quiet::Bool = false) where {T}
 
-    base = _nonlinear_row_base(spec, T, scfg, λ)
-    missing_row = _nonlinear_missing_row(spec, T, scfg, λ)
+    base = _nonlinear_row_base(spec, T, scfg, reg)
+    missing_row = _nonlinear_missing_row(spec, T, scfg, reg)
 
     _maybe_quiet(quiet) do
     try
@@ -254,7 +277,7 @@ function run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ
         params = GIB.parameters(prob)
 
         opts = merge(_solver_options(T; max_iterations, f_abstol = spec.f_abstol_factor * eps(T)),
-                     (; regularization_factor = T(λ)))
+                     (; regularization_factor = reg.factor(T)))
         int  = if scfg.linesearch === nothing
             GeometricIntegrator(prob, method; solver = scfg.solver, opts...)
         else
@@ -295,11 +318,15 @@ function run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ
                 runtime_s = runtime === missing ? missing : Float64(runtime),
                 max_residual = res.max_residual, energy_drift, accuracy)
     catch err
-        quiet || @warn "run_nonlinear_case failed" problem = spec.name precision = T solver = solver_label(scfg) regularization = λ exception = err
+        quiet || @warn "run_nonlinear_case failed" problem = spec.name precision = T solver = solver_label(scfg) regularization = reg.name exception = err
         return missing_row
     end
     end  # _maybe_quiet
 end
+
+run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ::Real, method;
+                   kwargs...) where {T} =
+    run_nonlinear_case(spec, T, scfg, RegularizationConfig(λ), method; kwargs...)
 
 """
     run_nonlinear_benchmark(spec; method_builder = nonlinear_onelayer_method,
@@ -311,10 +338,13 @@ end
 
 Run the full nonlinear-integrator benchmark grid for one LODE `spec` and return
 the results as a `DataFrame`, one row per (precision × solver configuration ×
-regularization factor). The integrator `method` is built once per precision via
+regularization configuration). The integrator `method` is built once per precision via
 `method_builder(T)` and reused across the solver/regularization sweep (building
 the network is relatively expensive). If that build fails for a precision, the
 whole block is recorded as non-converged rows instead of aborting the sweep.
+
+`regularization_factors` may mix [`RegularizationConfig`](@ref)s with bare `Real`s;
+the latter are wrapped as fixed-value configurations.
 """
 function run_nonlinear_benchmark(spec::ProblemSpec;
                                  method_builder = nonlinear_onelayer_method,
@@ -326,6 +356,9 @@ function run_nonlinear_benchmark(spec::ProblemSpec;
                                  verbose::Bool = true,
                                  quiet::Bool = false)
 
+    regs = [r isa RegularizationConfig ? r : RegularizationConfig(r)
+            for r in regularization_factors]
+
     rows = Vector{Any}()
     for T in precisions
         # The network build happens once per precision, outside the per-case
@@ -336,14 +369,14 @@ function run_nonlinear_benchmark(spec::ProblemSpec;
             method_builder(T)
         catch err
             quiet || @warn "building the integrator failed" problem = spec.name precision = T exception = err
-            for scfg in solver_configs, λ in regularization_factors
-                push!(rows, _nonlinear_missing_row(spec, T, scfg, λ))
+            for scfg in solver_configs, reg in regs
+                push!(rows, _nonlinear_missing_row(spec, T, scfg, reg))
             end
             continue
         end
-        for scfg in solver_configs, λ in regularization_factors
-            verbose && @info "benchmarking" problem = spec.name precision = T solver = solver_label(scfg) regularization = λ
-            push!(rows, run_nonlinear_case(spec, T, scfg, λ, method; timing, max_iterations, quiet))
+        for scfg in solver_configs, reg in regs
+            verbose && @info "benchmarking" problem = spec.name precision = T solver = solver_label(scfg) regularization = reg.name
+            push!(rows, run_nonlinear_case(spec, T, scfg, reg, method; timing, max_iterations, quiet))
         end
     end
     DataFrame(rows)

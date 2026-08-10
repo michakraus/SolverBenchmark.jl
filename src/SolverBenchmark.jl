@@ -40,9 +40,10 @@ export double_pendulum_lode_spec, toda_lattice_lode_spec
 # `BFloat16` is re-exported so that `precisions = (BFloat16, ...)` can be written
 # without the caller taking a direct dependency on BFloat16s.
 export BFloat16
-export SolverConfig, InitialGuessConfig
+export SolverConfig, InitialGuessConfig, RegularizationConfig
 export default_solver_configs, default_initial_guesses, default_precisions
 export solver_label, precision_label
+export regularization_label, regularization_exponent, scaled_regularization
 export nonlinear_onelayer_method, nonlinear_solver_configs, nonlinear_regularization_factors
 export relu_k, gelu, elu
 

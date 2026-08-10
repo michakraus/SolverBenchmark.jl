@@ -7,6 +7,16 @@ const _PRECISION_ORDER = ["BFloat16", "Float16", "Float32", "Float64"]
 # Display order for the initial guesses (panels/rows in the plots and tables).
 const _INITIAL_GUESS_ORDER = ["NoInitialGuess", "HermiteExtrapolation", "MidpointExtrapolation"]
 
+# Display order for the regularization panels of the nonlinear sweep: the λ = 0
+# control first, then the ladder rungs in increasing order of the shift.
+const _REGULARIZATION_ORDER =
+    ["λ = 0"; [scaled_regularization(rung).name for rung in eachindex(_REG_EXPONENTS_LOW)]]
+
+# The default `panel_order` covers both experiment sets at once. The two label sets are
+# disjoint, so one list serves `:initial_guess` and `:regularization` alike and no call
+# site has to name the order it wants.
+const _PANEL_ORDER = [_INITIAL_GUESS_ORDER; _REGULARIZATION_ORDER]
+
 # Return the distinct values present in `values`, ordered according to `order`
 # (values not listed in `order` are appended in first-appearance order).
 function _ordered(values, order)
@@ -22,7 +32,7 @@ end
 const _AT_TOLERANCE_MARGIN = 10
 
 """
-    summary_table(df; panelcol = :initial_guess, panel_order = _INITIAL_GUESS_ORDER,
+    summary_table(df; panelcol = :initial_guess, panel_order = _PANEL_ORDER,
                   drop_empty = true)
 
 Return a tidy copy of a benchmark `DataFrame` for display: a selection of the
@@ -44,7 +54,7 @@ appears only if `df` carries the `f_abstol` column that `run_case` records, and
 with `drop_empty = true` only if at least one row is flagged.
 """
 function summary_table(df::DataFrame; panelcol::Symbol = :initial_guess,
-                       panel_order = _INITIAL_GUESS_ORDER, drop_empty::Bool = true)
+                       panel_order = _PANEL_ORDER, drop_empty::Bool = true)
     cols = [:precision, :solver_label, panelcol, :converged,
             :iterations_mean, :runtime_s, :max_residual, :at_tolerance,
             :energy_drift, :accuracy]
@@ -108,7 +118,7 @@ end
 """
     comparison_figure(df, valcol; ylabel, yscale = identity, title = "",
                       converged_only = false, panelcol = :initial_guess,
-                      panel_order = _INITIAL_GUESS_ORDER)
+                      panel_order = _PANEL_ORDER)
 
 Build a `CairoMakie.Figure` comparing metric `valcol` across the benchmarked
 solver configurations. One panel is drawn per distinct value of `panelcol`
@@ -125,7 +135,7 @@ function comparison_figure(df::DataFrame, valcol::Symbol;
                            title::AbstractString = "",
                            converged_only::Bool = false,
                            panelcol::Symbol = :initial_guess,
-                           panel_order = _INITIAL_GUESS_ORDER)
+                           panel_order = _PANEL_ORDER)
 
     # category axes come from the full grid so failing configs keep their tick
     igs     = _ordered(df[!, panelcol], panel_order)
@@ -218,7 +228,7 @@ plot_accuracy(df::DataFrame; title = "", kwargs...) =
 
 """
     plot_convergence(df; title = "", panelcol = :initial_guess,
-                     panel_order = _INITIAL_GUESS_ORDER)
+                     panel_order = _PANEL_ORDER)
 
 Overview of convergence across the whole grid: one panel per distinct value of
 `panelcol` (`:initial_guess` for the implicit-midpoint sweep, `:regularization`
@@ -227,7 +237,7 @@ and precisions on the y-axis. Green cells converged, red cells did not.
 """
 function plot_convergence(df::DataFrame; title::AbstractString = "",
                           panelcol::Symbol = :initial_guess,
-                          panel_order = _INITIAL_GUESS_ORDER)
+                          panel_order = _PANEL_ORDER)
     igs     = _ordered(df[!, panelcol], panel_order)
     solvers = unique(df.solver_label)
     precs   = filter(p -> p in df.precision, _PRECISION_ORDER)

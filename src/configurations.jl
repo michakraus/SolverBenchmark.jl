@@ -88,6 +88,94 @@ struct InitialGuessConfig
 end
 
 """
+    RegularizationConfig
+
+A `regularization_factor` configuration for the nonlinear solver: the
+Levenberg–Marquardt-style shift SimpleSolvers adds to the Newton Jacobian diagonal
+before factorizing it.
+
+# Fields
+- `name::String`: panel label of the configuration (`"λ = 0"`, `"λ rung 1"`, …).
+- `rung::Union{Int,Nothing}`: position on the precision-scaled ladder, or `nothing`
+  for a configuration whose value is the same at every precision.
+- `factor::Function`: callable `T -> value`, the shift at working precision `T`.
+
+**The value is a function of `T`, not a number.** The shift has to be scaled to the
+precision it protects: `1e-7` is a meaningful nudge to a `Float64` Jacobian and pure
+noise to a `Float16` one, whose own `√eps` is already `0.03`. See
+[`scaled_regularization`](@ref) for the ladder and
+[`nonlinear_regularization_factors`](@ref) for the list that is swept.
+"""
+struct RegularizationConfig
+    name::String
+    rung::Union{Int,Nothing}
+    factor::Function
+end
+
+"""
+    regularization_label(λ)
+
+Compact panel label for a fixed regularization factor: `"λ = 0"`, `"λ = 1e-3"`.
+The rungs of the precision-scaled ladder are labelled by position instead — their
+numeric value depends on the precision, and a benchmark `DataFrame` holds all four
+at once (see [`scaled_regularization`](@ref)).
+"""
+regularization_label(λ) =
+    λ == 0 ? "λ = 0" : "λ = " * replace((@sprintf "%.0e" λ), "e-0" => "e-", "e+0" => "e")
+
+"""
+    RegularizationConfig(λ::Real)
+
+A configuration holding the *same* factor `λ` at every precision, labelled by its
+value. This is how the `λ = 0` control of the nonlinear sweep is built, and the
+convenient form for a one-off investigation at a hand-picked value.
+"""
+RegularizationConfig(λ::Real) =
+    RegularizationConfig(regularization_label(λ), nothing, T -> T(λ))
+
+# The two regularization ladders, as exponents `k` of `2^k √eps(T)`. `Float64` needs
+# its own because `√eps` spans four orders of magnitude across the benchmarked formats
+# (`1.5e-8` against `8.8e-2` at `BFloat16`): multipliers that reach a useful shift in
+# double precision over-damp half precision several times over. Both ladders contain
+# `16√eps(T)`, NonlinearIntegrators' recommended default — rung 4 of the low-precision
+# ladder, rung 2 of the `Float64` one — so each is anchored on a known-good shift and
+# probes octaves either side of it.
+const _REG_EXPONENTS_LOW = (1, 2, 3, 4, 5, 6)
+const _REG_EXPONENTS_F64 = (2, 4, 6, 8, 10, 12)
+
+"""
+    regularization_exponent(T, rung)
+
+The exponent `k` for which `rung` of the regularization ladder is `2^k √eps(T)`.
+`Float64` uses `$(_REG_EXPONENTS_F64)`; every other precision uses
+`$(_REG_EXPONENTS_LOW)`.
+"""
+regularization_exponent(::Type{Float64}, rung::Integer) = _REG_EXPONENTS_F64[rung]
+regularization_exponent(::Type{T}, rung::Integer) where {T} = _REG_EXPONENTS_LOW[rung]
+
+# `2^k √eps(T)`, formed in `Float64` and converted once. Computing it as
+# `T(2)^k * sqrt(eps(T))` instead overflows to `Inf` for `Float16` from `k = 16` on,
+# and `run_nonlinear_case` records every exception as a non-converged row, so that
+# would turn a rung into a silent non-run. Taking `eps` to `Float64` first also keeps
+# `sqrt` off the `BFloat16` path.
+_regularization_factor(::Type{T}, rung::Integer) where {T} =
+    T(2.0^regularization_exponent(T, rung) * sqrt(Float64(eps(T))))
+
+"""
+    scaled_regularization(rung)
+
+Return the [`RegularizationConfig`](@ref) for `rung` of the precision-scaled ladder:
+a factor of `2^k √eps(T)`, with `k = `[`regularization_exponent`](@ref)`(T, rung)`.
+Labelled `"λ rung \$rung"` — by position rather than by value, so that the panel
+label is the same across precisions even though the value is not.
+"""
+function scaled_regularization(rung::Integer)
+    rung in eachindex(_REG_EXPONENTS_LOW) ||
+        throw(ArgumentError("rung must be in $(eachindex(_REG_EXPONENTS_LOW)), got $rung"))
+    RegularizationConfig("λ rung $rung", rung, T -> _regularization_factor(T, rung))
+end
+
+"""
     default_initial_guesses()
 
 Return the default list of [`InitialGuessConfig`](@ref)s:
