@@ -9,12 +9,11 @@ momenta. The Hamiltonian ``H(t, q, p)`` depends on both the coordinates and the
 momenta, so the energy-drift proxy is evaluated from the full ``(q, p)`` state.
 
 Unlike the [Double Pendulum](@ref), this problem uses the framework's default
-residual tolerance ``8\,\varepsilon(T)``. It carried the same relaxed
-``256\,\varepsilon(T)`` until that was measured against the alternative: the
-relaxation bought 3 converged runs out of 96 at ``\Delta t = 0.1`` and 1 at
-``\Delta t = 1.0``, while costing one to two orders of magnitude of residual on
-every run that converged either way. The Toda lattice simply does not have the
-double pendulum's raised residual floor.
+residual tolerance ``8\,\varepsilon(T)``: it does not have the double pendulum's
+raised residual floor, so relaxing the tolerance to ``256\,\varepsilon(T)`` here buys
+only 3 converged runs out of 96 at ``\Delta t = 0.1`` and 1 at ``\Delta t = 1.0``,
+while costing one to two orders of magnitude of residual on every run that converges
+either way.
 
 The benchmark below is regenerated at documentation build time with a single,
 fast timing pass. See the driver script `scripts/midpoint_toda_lattice.jl` for accurate

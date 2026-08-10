@@ -183,12 +183,12 @@ The native time span `(0, 120)` is shortened to `(0, 100)` with the standard
 `Δt = 0.1`; a coarse `Δt = 1.0` is used as a second scenario.
 
 Unlike the double pendulum this spec keeps the framework's default residual
-tolerance. It used to relax it to `256 eps(T)` as well, but measured, that bought
-3 converged runs of 96 at `Δt = 0.1` and 1 at `Δt = 1.0` while costing one to two
-orders of magnitude of residual on every run that converged either way (`Float64`
-worst case `1.8e-15` → `5.7e-14`, `Float32` `9.5e-7` → `3.1e-5`), and the extra
-runs it admitted stopped at a residual of `≈0.19` rather than `≈0.008`. The Toda
-lattice simply does not have the double pendulum's raised residual floor. See
+tolerance: it does not have the double pendulum's raised residual floor, so
+relaxing the tolerance to `256 eps(T)` here buys 3 converged runs of 96 at
+`Δt = 0.1` and 1 at `Δt = 1.0` while costing one to two orders of magnitude of
+residual on every run that converges either way (`Float64` worst case `1.8e-15`
+against `5.7e-14`, `Float32` `9.5e-7` against `3.1e-5`), and the extra runs it
+admits stop at a residual of `≈0.19` rather than `≈0.008`. See
 `scripts/f_abstol_study.jl`.
 """
 function toda_lattice_spec(; N = 16, μ = 0.3, timespan = (0.0, 100.0), timestep = 0.1)

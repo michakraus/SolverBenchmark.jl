@@ -125,10 +125,10 @@ Two specs are worth knowing about:
 
 - **The double pendulum keeps `f_abstol_factor = 256`**, and needs it: at the default
   `8` its 16-bit columns are empty (0/24 each against 5/24 and 11/24).
-- **The Toda lattice does not.** It carried the same override until it was measured:
-  `256` bought 3 converged runs of 96 at ``\Delta t = 0.1`` and 1 at
-  ``\Delta t = 1.0``, while costing one to two orders of magnitude of residual on
-  every run that converged either way. It now uses the framework default.
+- **The Toda lattice does not**, and uses the framework default: `256` there buys 3
+  converged runs of 96 at ``\Delta t = 0.1`` and 1 at ``\Delta t = 1.0``, while
+  costing one to two orders of magnitude of residual on every run that converges
+  either way.
 
 `scripts/f_abstol_study.jl` regenerates that comparison.
 

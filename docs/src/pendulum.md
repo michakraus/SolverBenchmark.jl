@@ -56,8 +56,8 @@ plot_energy_drift(df)
   identically, so in this mildly nonlinear regime the line search barely affects
   the iteration count.
 - **Every configuration converges at `Float16` and above** — 72 of the 96 runs.
-  `Newton/Quadratic`, which used to fail on the pendulum at every precision,
-  converges throughout since SimpleSolvers 0.10.
+  `Newton/Quadratic` converges throughout, as it does on the
+  [Harmonic Oscillator](@ref).
 - **`BFloat16` converges only with `NoInitialGuess`** (8/24). As for the
   [Harmonic Oscillator](@ref), this is the `BFloat16` time grid rather than the
   solver: at ``\Delta t = 0.1`` over ``(0, 100)`` consecutive times collide, and

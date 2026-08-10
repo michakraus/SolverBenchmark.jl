@@ -204,9 +204,9 @@ using Test
         # reduced precision: with the default `8 eps(T)` the double pendulum's
         # residual floor is unreachable and *no* configuration converges at
         # Float32. Guard that a robust config still converges there.
-        # The Toda lattice used to carry the same override; measured, it bought
-        # 3 runs of 96 while costing one to two orders of magnitude of residual,
-        # so it now uses the framework default (see scripts/f_abstol_study.jl).
+        # The Toda lattice takes the framework default instead: relaxing it there
+        # buys 3 runs of 96 while costing one to two orders of magnitude of
+        # residual (see scripts/f_abstol_study.jl).
         @testset "Toda lattice uses the framework default tolerance" begin
             @test toda_lattice_spec().f_abstol_factor == 8
         end

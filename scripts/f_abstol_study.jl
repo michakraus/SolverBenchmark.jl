@@ -3,11 +3,11 @@
 #
 #     julia --project=. scripts/f_abstol_study.jl
 #
-# The override was introduced when several configurations reported non-convergence
-# at `8 eps(T)` even though the step was fully solved. This script re-measures that
-# claim: for each affected spec it runs the full sweep at both factors and prints
-# converged-run counts and the residual range, so the override can be dropped where
-# it is no longer earning its keep.
+# The override exists because on some problems several configurations report
+# non-convergence at `8 eps(T)` even though the step is fully solved. This script
+# tests that claim per spec: it runs the full sweep at both factors and prints
+# converged-run counts and the residual range, so the override can be kept only where
+# it earns its keep.
 #
 # Writes `results/f_abstol_study.md`.
 

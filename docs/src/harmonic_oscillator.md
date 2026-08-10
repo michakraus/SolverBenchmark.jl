@@ -68,9 +68,8 @@ plot_accuracy(df)
   to the iteration count here.
 - **Every configuration converges at `Float16` and above**: 72 of the 96 runs —
   eight solver configurations × three initial guesses at each of `Float16`,
-  `Float32` and `Float64`. The `Quadratic` and `BierlaireQuadratic` line searches
-  used to fail at several precisions on this problem; SimpleSolvers 0.10 fixed
-  the underlying defects and they now converge throughout.
+  `Float32` and `Float64`. That includes the `Quadratic` and `BierlaireQuadratic`
+  line searches, which need SimpleSolvers 0.10 or later to converge here.
 - **`BFloat16` converges only with `NoInitialGuess`** (8/24), and the reason has
   nothing to do with the solver. With 8 significand bits the spacing of
   `BFloat16` at ``t = 100`` is `0.5`, five times the step, so the time series
