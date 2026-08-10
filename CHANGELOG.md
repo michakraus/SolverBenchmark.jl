@@ -64,7 +64,11 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   `sweep` matrix of ten jobs — one per analysis page — followed by a `documenter` job
   that collects their results, renders the site and deploys, and withholds the
   deployment when any sweep failed. `makedocs` is called with `pagesonly=true`, without
-  which each `sweep` job would expand every page and run the entire study.
+  which each `sweep` job would expand every page and run the entire study. Each `sweep`
+  step retries once, because Julia aborts mid-sweep on these runners
+  nondeterministically (silent `SIGABRT`, no stack trace, most often on the Toda
+  lattice); the retry emits a warning annotation, so a page that comes to need it every
+  time is still visible.
 - Benchmark rows carry the `f_abstol` each run was solved to, and `summary_table`
   adds an `at_tolerance` column marking converged rows whose `max_residual` is
   within a factor of ten of it — so "converged against a target too loose to be

@@ -49,6 +49,18 @@ Build, dependency and CI notes for this repository.
 - **The docs are built only by `.github/workflows/Documenter.yml`.** `CI.yml` runs the
   tests; building the docs there too would duplicate hours of compute and race the other
   build for `gh-pages`.
+
+!!! warning "The sweeps abort nondeterministically on the CI runners"
+    Julia sometimes dies mid-sweep with a silent `SIGABRT` — exit 134, `Aborted (core
+    dumped)`, no exception and no stack trace — most often on the Toda lattice. It has
+    not reproduced locally, and it is not tied to a code change: the run that first
+    showed it had `Sweep toda_lattice` abort and then the `documenter` job recompute the
+    same two sweeps successfully, on the same runner image and commit.
+
+    The `sweep` step therefore retries once and annotates the run with a warning when it
+    does. Because a crash leaves the sweeps it had already finished in the cache, the
+    retry recomputes only what is missing. If a page starts needing the retry every
+    time, that is no longer a flake and the warnings are how you will notice.
 - **Documenter inlines figures as base64**, so several figures per page comfortably
   exceed the default page-size limit. `size_threshold` (and
   `size_threshold_warn`) are raised in the `Documenter.HTML` block of

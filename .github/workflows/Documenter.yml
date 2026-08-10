@@ -67,8 +67,21 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()
             Pkg.precompile()'
+      # Julia aborts here nondeterministically on these runners: a silent SIGABRT, no
+      # exception and no stack trace, most often on the Toda lattice. It does not
+      # reproduce locally, and the same sweeps complete on a second attempt — the run
+      # that prompted this retried them in the `documenter` job below and they passed.
+      # So retry once rather than withhold a deployment over one bad roll, and emit a
+      # warning annotation so that a page needing the retry regularly stays visible
+      # instead of looking clean. A crash part way through leaves the sweeps it already
+      # finished in the cache, so the retry only recomputes what is missing.
       - name: Compute the page's sweeps
-        run: julia --project=docs docs/make.jl
+        run: |
+          if julia --project=docs docs/make.jl; then
+            exit 0
+          fi
+          echo "::warning::${{ matrix.page }}: first attempt failed, retrying once"
+          julia --project=docs docs/make.jl
         env:
           DOCS_PAGES: ${{ matrix.page }}.md
           SOLVERBENCHMARK_SWEEP_CACHE: ${{ github.workspace }}/sweepcache
