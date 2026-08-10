@@ -34,6 +34,7 @@ constraint worth preserving when extending it.
 | `src/configurations.jl` | [`SolverConfig`](@ref)/[`InitialGuessConfig`](@ref)/[`RegularizationConfig`](@ref), [`solver_label`](@ref)/[`precision_label`](@ref), the [`scaled_regularization`](@ref) ladder, and the default grid. |
 | `src/benchmark.jl` | Solver options, the `quiet` logger, [`run_case`](@ref)/[`run_benchmark`](@ref). |
 | `src/nonlinear.jl` | The second experiment set: LODE specs, activation factories ([`relu_k`](@ref)/[`gelu`](@ref)/[`elu`](@ref)), [`nonlinear_onelayer_method`](@ref), [`run_nonlinear_case`](@ref)/[`run_nonlinear_benchmark`](@ref). |
+| `src/cache.jl` | [`cached_sweep`](@ref), the seam that lets the documentation build compute one page's sweeps per CI job — see [Documentation](@ref). |
 | `src/bfloat16.jl` | The `BFloat16` compatibility layer — see [Low-Precision Support](@ref). |
 | `src/plots.jl` | CairoMakie helpers, [`summary_table`](@ref), [`markdown_table`](@ref). |
 | `scripts/` | `midpoint_analysis.jl`/`nonlinear_analysis.jl` shared runners, one script per example, `run_all.jl` (everything in these docs), and the standalone `nonlinear_activation_study.jl`/`f_abstol_study.jl`. All write CSV and figures to `results/` (gitignored) with ``\Delta t`` embedded in the file names. |

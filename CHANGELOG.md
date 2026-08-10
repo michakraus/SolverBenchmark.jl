@@ -26,6 +26,11 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   the nonlinear sweep's `regularization_factor` is now a function of the working
   precision rather than a number. Nonlinear rows carry the exponent and the value
   each one resolved to in `regularization_exponent`/`regularization_factor`.
+- `cached_sweep`/`sweep_cache_dir`, and a `DOCS_PAGES` knob on `docs/make.jl`: the
+  documentation build now fans out over one CI job per analysis page, each computing
+  only that page's sweeps and passing the results to the job that renders the site.
+  Without a cache directory configured it is a plain call, so a local
+  `julia --project=docs docs/make.jl` behaves exactly as before.
 - `_REGULARIZATION_ORDER` and `_PANEL_ORDER` in `src/plots.jl`, so the nonlinear
   panels have an explicit display order instead of relying on `λ` being the
   innermost loop. `_PANEL_ORDER` covers both experiment sets, so no call site has to
@@ -53,6 +58,13 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   worst case `1.8e-15` → `5.7e-14`). Unlike the double pendulum, the Toda lattice
   has no raised residual floor. The double pendulum and the four LODE specs keep
   their overrides, which the same measurement shows are still load-bearing.
+- **The documentation is built by one workflow, not two.** `CI.yml` no longer carries a
+  `Documentation` job: it duplicated the whole build and raced
+  `.github/workflows/Documenter.yml` for the `gh-pages` branch. That workflow now runs a
+  `sweep` matrix of ten jobs — one per analysis page — followed by a `documenter` job
+  that collects their results, renders the site and deploys, and withholds the
+  deployment when any sweep failed. `makedocs` is called with `pagesonly=true`, without
+  which each `sweep` job would expand every page and run the entire study.
 - Benchmark rows carry the `f_abstol` each run was solved to, and `summary_table`
   adds an `at_tolerance` column marking converged rows whose `max_residual` is
   within a factor of ten of it — so "converged against a target too loose to be

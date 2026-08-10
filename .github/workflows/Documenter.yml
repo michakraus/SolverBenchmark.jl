@@ -1,33 +1,144 @@
 name: Documentation
 
+# Building the documentation runs every sweep in the study — twenty-four of them, up to
+# 112 runs each — so `deploydocs` publishes from `main` and tags only.
 on:
   push:
     branches:
       - main
     tags: '*'
   pull_request:
+  workflow_dispatch:
+
+# Superseded runs on the same ref are pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Widened to `write` on the deploying job only.
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Documentation
+  # One job per analysis page. Each runs `make.jl` restricted to its own page, which is
+  # not for the rendered output — that is discarded — but for the sweeps the page's
+  # `@example` blocks execute: `cached_sweep` writes them to `SOLVERBENCHMARK_SWEEP_CACHE`,
+  # and this job uploads that directory. The `documenter` job then renders the whole site
+  # from the collected CSVs without recomputing anything.
+  #
+  # Page granularity is the natural unit because a page's sweeps are defined in the page.
+  # The nonlinear pages are the slow ones: three sweeps of 112 runs each, against two of
+  # 96 for the implicit-midpoint pages.
+  sweep:
+    name: Sweep ${{ matrix.page }}
     runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      # One diverging integrator must not stop the remaining pages from being computed.
+      fail-fast: false
+      matrix:
+        page:
+          - harmonic_oscillator
+          - pendulum
+          - lotka_volterra_2d
+          - lotka_volterra_4d
+          - double_pendulum
+          - toda_lattice
+          - nonlinear_harmonic_oscillator
+          - nonlinear_pendulum
+          - nonlinear_double_pendulum
+          - nonlinear_toda_lattice
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
-      - run: |
+      # All jobs of this workflow share one depot cache: the default cache name includes
+      # the job name and the matrix values, which would give one near-identical cache per
+      # matrix cell and a cold cache in the `documenter` job.
+      - uses: julia-actions/cache@v3
+        with:
+          cache-name: julia-cache;workflow=${{ github.workflow }}
+          include-matrix: false
+      - name: Install dependencies
+        run: |
           julia --project=docs -e '
             using Pkg
             Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate()'
-      - run: |
+            Pkg.instantiate()
+            Pkg.precompile()'
+      - name: Compute the page's sweeps
+        run: julia --project=docs docs/make.jl
+        env:
+          DOCS_PAGES: ${{ matrix.page }}.md
+          SOLVERBENCHMARK_SWEEP_CACHE: ${{ github.workspace }}/sweepcache
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sweeps-${{ matrix.page }}
+          path: sweepcache
+          retention-days: 1
+
+  # Collect every page's sweeps, then build and deploy the site.
+  documenter:
+    name: Documenter
+    needs: sweep
+    # Build even when some sweeps failed, so that there is a build log and a site to look
+    # at; the deployment itself is gated on a complete run below. `!cancelled()` still
+    # respects cancellation through the `concurrency` group.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+        with:
+          cache-name: julia-cache;workflow=${{ github.workflow }}
+      - name: Install dependencies
+        run: |
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()
+            Pkg.precompile()'
+      - name: Doctests
+        run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
             using SolverBenchmark
             DocMeta.setdocmeta!(SolverBenchmark, :DocTestSetup, :(using SolverBenchmark); recursive=true)
             doctest(SolverBenchmark)'
-      - run: julia --project=docs docs/make.jl
+      - name: Collect the computed sweeps
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sweeps-*
+          merge-multiple: true
+          path: sweepcache
+      # A page whose sweep job failed has no CSV, so its `@example` blocks would silently
+      # recompute the sweep here and blow this job's budget instead of failing. Name the
+      # gap explicitly.
+      - name: Report the collected sweeps
+        run: |
+          ls -la sweepcache
+          echo "collected $(ls sweepcache/*.csv 2>/dev/null | wc -l) sweeps (expected 24)"
+      - name: Build and deploy
+        run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+          SOLVERBENCHMARK_SWEEP_CACHE: ${{ github.workspace }}/sweepcache
+          # `needs.sweep.result` is `success` exactly when every matrix job succeeded.
+          DEPLOY_DOCS: ${{ needs.sweep.result == 'success' }}
+      # Nothing was deployed in that case, so keep the site around for inspection.
+      - name: Upload the site of an incomplete build
+        if: ${{ always() && needs.sweep.result != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: documenter-site
+          path: docs/build
+          retention-days: 7
+          if-no-files-found: ignore

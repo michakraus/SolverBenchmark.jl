@@ -51,28 +51,6 @@ jobs:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write # needed to allow julia-actions/cache to proactively delete old caches that it has created
-      contents: write
-      statuses: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@v3
-        with:
-          version: '1'
-      - uses: julia-actions/cache@v3
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-docdeploy@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-      - name: Run doctests
-        shell: julia --project=docs --color=yes {0}
-        run: |
-          using Documenter: DocMeta, doctest
-          using SolverBenchmark
-          DocMeta.setdocmeta!(SolverBenchmark, :DocTestSetup, :(using SolverBenchmark); recursive=true)
-          doctest(SolverBenchmark)
+# The documentation is built by the `Documentation` workflow, which fans the sweeps out
+# over one job per analysis page. Building it here as well would duplicate hours of
+# compute and race the other build for the `gh-pages` branch.
