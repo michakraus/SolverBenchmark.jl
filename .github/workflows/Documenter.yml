@@ -79,26 +79,56 @@ jobs:
             Pkg.instantiate()
             Pkg.precompile()'
       # Julia dies here intermittently with a silent SIGABRT — exit 134, `Aborted (core
-      # dumped)`, no exception and no stack trace. It has hit a different sweep each run,
-      # does not reproduce locally, and is not fixed by retrying: a retried step reuses the
-      # runner and reproduced the abort at the same point, and the `documenter` job then hit
-      # it on a *different* host recomputing the same sweep. Since the cause is not yet
-      # known, record what the host was so that failing runs can be compared.
+      # dumped)`, no exception and no stack trace, not even under a pty.
+      #
+      # It correlates with the runner's CPU vendor. Over one full run: 2 of the 3 jobs that
+      # landed on Intel died — a Xeon Platinum 8573C (`sapphirerapids`) and a Xeon 6973P-C
+      # (`graniterapids`) — and 0 of the 15 on AMD (`znver3`/`znver4`) did. That is why
+      # retrying on the same runner cannot help, and why the sweep that fails differs from
+      # run to run: it is the draw of the runner, not the sweep. It also never reproduces
+      # locally, on arm64.
+      #
+      # These diagnostics are what established that, and are kept so the correlation can be
+      # rechecked as the fleet changes.
       - name: Runner diagnostics
         run: |
           julia -e 'using InteractiveUtils; versioninfo(verbose = false)'
           julia -e 'using LinearAlgebra; @show BLAS.get_config(); @show BLAS.get_num_threads()'
           echo "--- cpu"
-          lscpu | grep -E "^(Model name|Vendor ID|CPU\(s\)|Flags)" | cut -c1-200
+          lscpu | grep -E "^(Model name|Vendor ID|CPU\(s\)):"
+          # named separately because the full flag list is long and gets truncated:
+          # AVX-512 half precision is Intel-only here and the sweeps run at `Float16`
+          echo "avx512: $(lscpu | grep -oE 'avx512[a-z0-9_]*' | sort -u | tr '\n' ' ')"
           echo "--- memory"
           free -g
-      # Run under a pty. Julia buffers `stdout`/`stderr` when they are pipes, as they are
-      # here, so anything written just before the abort is still in that buffer when the
-      # process dies and is lost — which is very likely why this crash has looked
-      # message-less. `script` gives it a terminal, so output is line-buffered and survives;
-      # `-e` propagates the command's exit status instead of `script`'s.
+      # Each attempt below removes one candidate cause and says so in the log, which turns
+      # the next Intel draw into a measurement rather than another mystery.
+      #
+      # Under a pty throughout: Julia buffers `stdout`/`stderr` when they are pipes, so
+      # `script` gives it a terminal and nothing written just before the abort is lost to
+      # the buffer. `-e` propagates the command's exit status rather than `script`'s. (This
+      # did not make the crash say anything, so it prints nothing at all — but it is how a
+      # message would reach the log if there were one.)
       - name: Compute the sweeps
-        run: script -q -e -c "julia --project=docs docs/make.jl" /dev/null
+        run: |
+          run_sweep() { script -q -e -c "julia --project=docs docs/make.jl" /dev/null; }
+
+          if run_sweep; then exit 0; fi
+
+          echo "::warning::${{ matrix.id }}: aborted, retrying with OPENBLAS_NUM_THREADS=1"
+          if ( export OPENBLAS_NUM_THREADS=1; run_sweep ); then
+            echo "::warning::${{ matrix.id }}: passed with OPENBLAS_NUM_THREADS=1 — BLAS threading implicated"
+            exit 0
+          fi
+
+          echo "::warning::${{ matrix.id }}: still aborting, retrying with JULIA_CPU_TARGET=generic"
+          if ( export JULIA_CPU_TARGET=generic; run_sweep ); then
+            echo "::warning::${{ matrix.id }}: passed with JULIA_CPU_TARGET=generic — host code generation implicated"
+            exit 0
+          fi
+
+          echo "::error::${{ matrix.id }}: aborted under all three configurations"
+          exit 134
         env:
           DOCS_PAGES: ${{ matrix.page }}.md
           SOLVERBENCHMARK_SWEEPS: ${{ matrix.sweeps }}

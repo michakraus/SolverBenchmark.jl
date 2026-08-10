@@ -59,29 +59,32 @@ Build, dependency and CI notes for this repository.
   tests; building the docs there too would duplicate hours of compute and race the other
   build for `gh-pages`.
 
-!!! warning "The sweeps abort intermittently on the CI runners — cause unknown"
-    Julia sometimes dies mid-sweep with a silent `SIGABRT`: exit 134, `Aborted (core
-    dumped)`, no exception, no stack trace, nothing on stderr. What is established:
+!!! warning "The sweeps abort on Intel runners"
+    Julia dies mid-sweep with a silent `SIGABRT` — exit 134, `Aborted (core dumped)`, no
+    exception, no stack trace, nothing on stderr even under a pty — and **it correlates
+    with the runner's CPU vendor.** Over one full run:
 
-    - It hits a different sweep each run — `toda_lattice` once, `nonlinear_pendulum` at
-      ``\Delta t = 0.1`` the next — and roughly one job per run.
-    - It does not reproduce locally; that sweep runs clean repeatedly on macOS/arm64.
-    - **Retrying does not help.** A retried step reuses the same runner and reproduced
-      the abort at the same point (66 s, then 63 s into `ExpandTemplates`).
-    - **It is not bound to a host either.** The `documenter` job then aborted on the same
-      sweep on a different runner, having recomputed a different sweep successfully in an
-      earlier run.
+    | | Intel | AMD |
+    |:--|--:|--:|
+    | aborted | 2 of 3 | 0 of 15 |
 
-    So it is neither a transient nor a property of one machine, and it is not caused by
-    any change in this repository — the same sweeps pass and fail across runs of the same
-    commit. The `Runner diagnostics` step records the Julia build, BLAS configuration, CPU
-    model and memory of every sweep job so that failing runs can be compared; a silent
-    `SIGABRT` in work dominated by small LU factorizations would be consistent with
-    OpenBLAS, which is the first thing to rule out.
+    The two that died were a Xeon Platinum 8573C (`sapphirerapids`) and a Xeon 6973P-C
+    (`graniterapids`); every job on an EPYC (`znver3`/`znver4`) passed, as does every run
+    on a local arm64 machine. Both deaths were about 30 s into `ExpandTemplates`.
 
-    Until it is understood, a run that trips it withholds the deployment. Re-running the
-    single failed job is the cheap way through — a few minutes, against the hour and a
-    half a monolithic build used to cost.
+    That explains what looked inexplicable before it was measured: the failing sweep
+    differs from run to run because it is the *draw of the runner* that decides, not the
+    sweep — so retrying on the same runner reproduces the abort (66 s, then 63 s), while a
+    different job on a different host sails through the same work.
+
+    The cause below that is not yet identified. The `Compute the sweeps` step therefore
+    narrows it on each occurrence: after an abort it retries with
+    `OPENBLAS_NUM_THREADS=1`, then with `JULIA_CPU_TARGET=generic`, and annotates the run
+    with which one let the sweep through — BLAS threading or host code generation. Until
+    an Intel job trips it again there is nothing to read.
+
+    A run that aborts under all three withholds the deployment. Re-running that single job
+    is the cheap way through: a few minutes, and it will likely land on a different host.
 - **Documenter inlines figures as base64**, so several figures per page comfortably
   exceed the default page-size limit. `size_threshold` (and
   `size_threshold_warn`) are raised in the `Documenter.HTML` block of
