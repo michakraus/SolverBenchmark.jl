@@ -78,20 +78,23 @@ Build, dependency and CI notes for this repository.
     abort (66 s, then 63 s) while another job does the same work untouched, and why the
     sweep that fails differs from run to run — the runner draw decides.
 
-    What is excluded so far: **BLAS threading** (`OPENBLAS_NUM_THREADS=1` changed nothing).
-    Still open: OpenBLAS *kernel dispatch*, which has to recognise a core it may be older
-    than, and Julia's code generation for these targets. The `Compute the sweeps` step
-    narrows them on each occurrence, retrying with `OPENBLAS_CORETYPE=Haswell` and then
-    with `JULIA_CPU_TARGET=generic`, and annotating which one let the sweep through.
+    Excluded by measurement: **BLAS threading** (`OPENBLAS_NUM_THREADS=1`) and **OpenBLAS
+    kernel dispatch** (`OPENBLAS_CORETYPE=Haswell`) — both left the abort untouched.
 
-    !!! note "A CPU-target fallback must precompile"
-        `JULIA_CPU_TARGET` set only for the run reuses the pkgimages already built for the
-        native target, so it tests nothing and quietly reports "not the cause". The
-        fallback runs `Pkg.precompile()` under the new target first. The tell is timing: a
-        genuine rebuild takes minutes, not the twenty seconds a reused image takes.
+    !!! note "`JULIA_CPU_TARGET` cannot be probed by setting it for the run"
+        It does not invalidate the pkgimages, so Julia reuses the ones already built for
+        the native target and nothing is tested; the attempt then reports code generation
+        as excluded when it was never exercised. The tell is timing — a no-op reaches
+        `ExpandTemplates` half a minute later, where a genuine precompile of this stack
+        takes eleven minutes. Testing it properly means setting the variable for the whole
+        job *and* disabling the depot cache, so everything is built under the new target.
 
-    A run that aborts under everything withholds the deployment. Re-running that single job
-    is the cheap way through: a few minutes, and it will likely land on an older host.
+    Since toggling environment variables has run out of candidates, the step now enables
+    core dumps and, on an abort, hands the core to `gdb` for a backtrace. That should name
+    the library rather than leave it to be guessed at, which is the point this has reached.
+
+    A run that aborts still withholds the deployment. Re-running that single job is the
+    cheap way through: a few minutes, and it will likely land on an older host.
 - **Documenter inlines figures as base64**, so several figures per page comfortably
   exceed the default page-size limit. `size_threshold` (and
   `size_threshold_warn`) are raised in the `Documenter.HTML` block of

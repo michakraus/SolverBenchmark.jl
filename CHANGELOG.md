@@ -72,9 +72,9 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   Julia dies mid-sweep with a silent `SIGABRT` on the newest runners: over two runs, every
   job on `znver5`, `graniterapids` or `sapphirerapids` aborted (7 of 8) and none on
   `znver3` or `znver4` did (0 of 15), which is why the failing sweep differed from run to
-  run and why retrying on the same runner reproduced it. BLAS threading is excluded;
-  after an abort the step retries with `OPENBLAS_CORETYPE=Haswell`, then rebuilds under
-  `JULIA_CPU_TARGET=generic`, annotating which one let the sweep through.
+  run and why retrying on the same runner reproduced it. BLAS threading and OpenBLAS kernel
+  dispatch are both excluded by measurement, so after an abort the step now dumps core and
+  hands it to `gdb` for a backtrace rather than guessing at further environment toggles.
 - Benchmark rows carry the `f_abstol` each run was solved to, and `summary_table`
   adds an `at_tolerance` column marking converged rows whose `max_residual` is
   within a factor of ten of it — so "converged against a target too loose to be
