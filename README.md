@@ -21,15 +21,22 @@ the analytic solution where available).
 
 | Dimension | Values |
 |:----------|:-------|
-| Precision | `Float16`, `Float32`, `Float64` |
+| Precision | `BFloat16`, `Float16`, `Float32`, `Float64` |
 | Solver | `Newton`, `DogLeg`, `Picard` |
 | Line search (Newton only) | `Static`, `Backtracking`, `Bisection`, `Quadratic`, `BierlaireQuadratic`, `StrongWolfe` |
 | Initial guess | `HermiteExtrapolation`, `MidpointExtrapolation`, `NoInitialGuess` (previous step) |
 
-Four example problems are analysed out of the box — the (linear) harmonic
-oscillator and the (nonlinear) pendulum, both as `odeproblem`s, plus the 2d and
-4d Lotka–Volterra systems as `iodeproblem`s (non-canonical Hamiltonian systems) —
+Six example problems are analysed out of the box — the (linear) harmonic
+oscillator and the (nonlinear) pendulum, both as `odeproblem`s; the 2d and 4d
+Lotka–Volterra systems as `iodeproblem`s (non-canonical Hamiltonian systems);
+and the chaotic double pendulum and a 16-site Toda lattice as `hodeproblem`s —
 and the design makes it easy to add more problems and integrators.
+
+The two 16-bit formats are both swept because they divide the same 16 bits
+differently: `Float16` keeps 11 significand bits and a 5-bit exponent, `BFloat16`
+only 8 significand bits but an 8-bit exponent — the same dynamic range as
+`Float32`. Running both separates a failure caused by too few digits from one
+caused by too little range.
 
 ## Usage
 

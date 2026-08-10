@@ -57,8 +57,10 @@ plot_energy_drift(df; panelcol = :regularization)
   `Float64`.
 - The pendulum's nonlinearity means the solve needs a few more iterations per step
   than the (linear) oscillator.
-- `Float16` fails (singular Newton Jacobian), as it does throughout the nonlinear
-  study.
+- **Both 16-bit formats fail** (singular Newton Jacobian), as they do throughout
+  the nonlinear study: 0/16 at `Float16` and 0/16 at `BFloat16`, against 12/16 at
+  each of `Float32` and `Float64`. `BFloat16`'s wider exponent does not help — the
+  network Jacobian is near-singular, and resolving it takes significand bits.
 
 ## Results table
 

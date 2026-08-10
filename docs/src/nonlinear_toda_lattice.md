@@ -55,7 +55,10 @@ plot_energy_drift(df; panelcol = :regularization)
   it does not converge.
 - Run times are higher than the low-dimensional examples (16 coupled network fits
   per step), which is the main cost visible here.
-- `Float16` fails (singular Newton Jacobian).
+- **Only `Float64` converges** (12/16); `Float32`, `Float16` and `BFloat16` all
+  fail with a singular Newton Jacobian. As everywhere in this experiment set,
+  `BFloat16` gains nothing from its `Float32`-sized exponent — the network
+  Jacobian is near-singular, and that is a question of significand bits.
 
 ## Results table
 

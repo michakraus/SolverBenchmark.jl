@@ -66,23 +66,36 @@ plot_accuracy(df)
   so **Newton converges in exactly one iteration per step** for every line search,
   as does `DogLeg`. The choice of line search is therefore essentially irrelevant
   to the iteration count here.
-- **Every configuration converges**: all 72 runs — three precisions × eight solver
-  configurations × three initial guesses. The `Quadratic` and
-  `BierlaireQuadratic` line searches used to fail at several precisions on this
-  problem; SimpleSolvers 0.10 fixed the underlying defects and they now converge
-  throughout.
+- **Every configuration converges at `Float16` and above**: 72 of the 96 runs —
+  eight solver configurations × three initial guesses at each of `Float16`,
+  `Float32` and `Float64`. The `Quadratic` and `BierlaireQuadratic` line searches
+  used to fail at several precisions on this problem; SimpleSolvers 0.10 fixed
+  the underlying defects and they now converge throughout.
+- **`BFloat16` converges only with `NoInitialGuess`** (8/24), and the reason has
+  nothing to do with the solver. With 8 significand bits the spacing of
+  `BFloat16` at ``t = 100`` is `0.5`, five times the step, so the time series
+  `0:0.1:100` holds 1001 points but only 451 distinct values; the two
+  extrapolating initial guesses are then handed two identical times and abort.
+  At the [coarse step](@ref harmonic_oscillator_dt1) the grid resolves and all
+  24 `BFloat16` runs converge — the one place in this study where a *larger*
+  time step helps.
 - **`Bisection` stops at the requested tolerance**; the others overshoot it. Its
-  residual sits right at `f_abstol = 8 eps(T)` (≈ `1e-6` at `Float32`, ≈ `2e-15` at
-  `Float64`), whereas the remaining line searches drive it a further two to three
-  orders of magnitude down. All of them converge — the difference is how far past
-  the tolerance they go, not whether they reach it.
+  residual sits right at `f_abstol = 8 eps(T)`, whereas the remaining line
+  searches drive it a further two to three orders of magnitude down. All of them
+  converge — the difference is how far past the tolerance they go, not whether
+  they reach it. The results table flags this in the `at_tolerance` column.
 - **`Picard`** (a fixed-point iteration) converges but needs many more iterations
-  (≈ 8 per step at `Float64`) and is by far the slowest solver.
+  and is by far the slowest solver. Its iteration count is set by how far the
+  tolerance is from the guess, so it *rises* with precision here: ≈ 1 per step at
+  `Float16`, 2–3 at `Float32`, 7–9 at `Float64`.
 - **Precision sets the achievable accuracy**: the energy is conserved to roughly
-  machine precision (≈ `1e-17` at `Float64`, `1e-8` at `Float32`, `1e-4` at
-  `Float16`), whereas the error against the analytic solution (≈ `5e-4`) is set
-  by the ``\mathcal{O}(\Delta t^2)`` midpoint discretization and is essentially
-  precision-independent down to `Float32`.
+  machine precision (≈ `7e-17` at `Float64`, `1e-7` at `Float32`, `4e-4` at both
+  16-bit formats), whereas the error against the analytic solution is set by the
+  ``\mathcal{O}(\Delta t^2)`` midpoint discretization. That discretization error
+  (`1.47e-2`) is reached exactly by `Float32` and `Float64`; `Float16`
+  (`2.0e-2` … `2.6e-2`) and `BFloat16` (`3.0e-2` … `7.5e-2`) sit above it,
+  round-off rather than discretization limited — and the gap between the two
+  16-bit formats is the three significand bits between them.
 - The **initial guess** does not affect Newton (one exact step regardless), but
   it does affect `Picard`: `MidpointExtrapolation` gives the fewest iterations
   and `NoInitialGuess` (previous step) the most.

@@ -4,6 +4,68 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`BFloat16` is swept alongside `Float16`.** `default_precisions()` is now
+  `(BFloat16, Float16, Float32, Float64)`, so both experiment sets grow by a
+  quarter (96 runs per implicit-midpoint problem, 64 per nonlinear problem). The
+  two 16-bit formats divide their bits differently — `Float16` has 11 significand
+  bits and a 5-bit exponent, `BFloat16` 8 and 8 — so sweeping both separates a
+  failure caused by too few digits from one caused by too little dynamic range.
+  `BFloat16` is re-exported, so callers need no direct BFloat16s dependency.
+- `precision_label(T)`, the name written to the `precision` column. It uses
+  `nameof` rather than `string`, which renders a type module-qualified when its
+  module is not visible from `Main` — `string(BFloat16)` gives
+  `"BFloat16s.BFloat16"` inside a Documenter `@example` sandbox, and the plotting
+  code drops rows whose precision label it does not recognise.
+- `scripts/f_abstol_study.jl`, comparing the relaxed `f_abstol_factor = 256`
+  against the framework default for the specs that override it.
+
+### Changed
+
+- **The Toda lattice uses the framework's default residual tolerance again.** Its
+  `f_abstol_factor = 256` was re-measured against the alternative: it bought 3
+  converged runs of 96 at `Δt = 0.1` and 1 at `Δt = 1.0`, while costing one to two
+  orders of magnitude of residual on every run that converged either way (`Float64`
+  worst case `1.8e-15` → `5.7e-14`). Unlike the double pendulum, the Toda lattice
+  has no raised residual floor. The double pendulum and the four LODE specs keep
+  their overrides, which the same measurement shows are still load-bearing.
+- Benchmark rows carry the `f_abstol` each run was solved to, and `summary_table`
+  adds an `at_tolerance` column marking converged rows whose `max_residual` is
+  within a factor of ten of it — so "converged against a target too loose to be
+  informative" travels with the data. The column is omitted when no row is flagged.
+  It is what makes the `BFloat16` double pendulum legible: residual 1.2–1.5 against
+  `256 eps(BFloat16) = 2.0`, on a system whose energy is `O(1)`.
+- `run_nonlinear_benchmark` builds the integrator once per precision *inside* an
+  error handler. A precision whose network cannot be constructed is now recorded
+  as non-converged rows instead of aborting the whole sweep.
+- `plot_convergence` scales its figure height with the number of precisions
+  instead of hard-coding one that fitted three rows.
+
+### Fixed
+
+- **A `BFloat16` compatibility layer** (`src/bfloat16.jl`). The stack does not
+  support `BFloat16` out of the box, and because `run_case`/`run_nonlinear_case`
+  record any exception as a non-converged row, each gap first presented as a
+  numerical failure rather than a missing method. All are upstream gaps, all use
+  the same exact widen-to-`Float32`-and-round, and all should be dropped as
+  BFloat16s and NaNMath grow the methods:
+  - `Base.rem` and `Base.Integer`, needed by the generic `AbstractFloat` range
+    constructor that builds every solution's `TimeSeries`. Without them every run
+    fails.
+  - `Base.sincos`, which otherwise **recurses until the stack overflows**:
+    `sincos(x) = _sincos(float(x))` and `_sincos(x::AbstractFloat) = sincos(x)`.
+  - `Base.atan(y, x)`, `Base.fma` and `Base.mod2pi`.
+  - `NaNMath.{sin,cos,tan,asin,acos,atanh,acosh,log,log2,log10,log1p}`, whose
+    NaN-returning variants are declared for `Union{Float16,Float32,Float64}` only
+    while GeometricProblems writes its right-hand sides against them. Adds a direct
+    `NaNMath` dependency.
+
+  With the layer in place all six implicit-midpoint problems converge at
+  `BFloat16`; without the NaNMath part, four of them appeared not to.
+
 ## [0.2.0] — 2026-08-08
 
 Upgrade to the current Geometric* stack.

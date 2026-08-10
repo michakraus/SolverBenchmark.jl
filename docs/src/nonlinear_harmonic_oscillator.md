@@ -17,7 +17,7 @@ regularization Newton does not converge. The swept options are:
 
 | Dimension | Values |
 |:----------|:-------|
-| Precision | `Float16`, `Float32`, `Float64` |
+| Precision | `BFloat16`, `Float16`, `Float32`, `Float64` |
 | Solver | `Newton/Static`, `Newton/Backtracking`, `Newton/StrongWolfe`, `DogLeg` |
 | Regularization ``\lambda`` | `0`, `1e-3`, `1e-5`, `1e-7` |
 
@@ -90,9 +90,13 @@ plot_accuracy(df; panelcol = :regularization)
 - **The choice of line search barely matters** once regularization is on: all of
   `Static`, `Backtracking`, `StrongWolfe` and `DogLeg` behave almost identically,
   because the regularized Newton step is already close to optimal.
-- **`Float16` fails.** Half precision cannot factor the (regularized) network
+- **Both 16-bit formats fail.** Neither can factor the (regularized) network
   Jacobian — the LU factorization is singular — so no configuration converges at
-  `Float16`, regardless of ``\lambda``. These runs are recorded as failures.
+  `Float16` or `BFloat16` (0/16 each), regardless of ``\lambda``. These runs are
+  recorded as failures. `BFloat16`'s wider exponent does not help: the obstacle
+  is the conditioning of the factorization, which wants significand bits, and it
+  has three fewer than `Float16`. The 25 converged runs of 64 are all `Float32`
+  (13/16) and `Float64` (12/16).
 - **`Float32` reaches its residual floor** (``\approx 10^{-5}``) and is reported as
   converged under the relaxed tolerance used for this problem
   (``256\,\varepsilon``); its accuracy against the analytic solution is

@@ -59,10 +59,18 @@ plot_energy_drift(df)
   pendulum (where it converged, if slowly), the fixed-point iteration diverges on
   the non-canonical `iodeproblem` formulation. It is the *only* solver that fails
   at `Float32`/`Float64`: every other configuration converges at both precisions.
-- **`Float16` largely fails** (only a handful of runs converge): the Newton
-  linear solve hits singular Jacobians and the trajectory diverges. `Float32` and
-  `Float64` behave essentially identically here — the achievable step accuracy is
-  already reached at `Float32`.
+- **`Float16` largely fails** (9/24 here, 13/24 at the coarse step): the Newton
+  linear solve hits singular Jacobians and the trajectory diverges. `Float32`
+  (19/24) and `Float64` (21/24) behave essentially identically — the achievable
+  step accuracy is already reached at `Float32`.
+- **`BFloat16` does worse than `Float16`, not better** — 1/24 here and 7/24 at
+  the coarse step, against 9/24 and 13/24. This is the comparison the two 16-bit
+  formats were added for, and it identifies the cause: the failures come from
+  near-singular Jacobians, which need *significand* bits, and `BFloat16` trades
+  three of them away for exponent range this problem never needs. (At
+  ``\Delta t = 0.01`` the `BFloat16` figure is further depressed by the
+  time-grid collision described under [Harmonic Oscillator](@ref); the coarse
+  step is the honest comparison.)
 - As always the **initial guess** matters only for the solvers that iterate more;
   for the one- to two-iteration Newton/DogLeg runs it has little effect.
 

@@ -8,6 +8,14 @@ initial positions come from a bump of width ``\mu = 0.3`` with zero initial
 momenta. The Hamiltonian ``H(t, q, p)`` depends on both the coordinates and the
 momenta, so the energy-drift proxy is evaluated from the full ``(q, p)`` state.
 
+Unlike the [Double Pendulum](@ref), this problem uses the framework's default
+residual tolerance ``8\,\varepsilon(T)``. It carried the same relaxed
+``256\,\varepsilon(T)`` until that was measured against the alternative: the
+relaxation bought 3 converged runs out of 96 at ``\Delta t = 0.1`` and 1 at
+``\Delta t = 1.0``, while costing one to two orders of magnitude of residual on
+every run that converged either way. The Toda lattice simply does not have the
+double pendulum's raised residual floor.
+
 The benchmark below is regenerated at documentation build time with a single,
 fast timing pass. See the driver script `scripts/midpoint_toda_lattice.jl` for accurate
 `BenchmarkTools` measurements. The results are shown first for the standard step
@@ -55,6 +63,15 @@ plot_energy_drift(df)
 
 - The 16-dimensional implicit solve is the most expensive of the examples, so
   the run-time differences between solver configurations are more pronounced.
+- **`Float16`, `Float32` and `Float64` are indistinguishable in convergence**
+  (21/24 each at ``\Delta t = 0.1``): despite being the highest-dimensional
+  problem of the set, the Toda lattice is well conditioned, and the three failures
+  in each column are `Picard`, which never converges here.
+- **`BFloat16` reaches only 7/24 at ``\Delta t = 0.1`` but 21/24 at
+  ``\Delta t = 1.0``**, matching the other three. The difference is not the
+  solver but the time grid: at the finer step `BFloat16` cannot represent
+  ``(0, 100)`` in increments of `0.1`, so the extrapolating initial guesses fail
+  (see [Harmonic Oscillator](@ref)).
 - No closed-form solution is available, so accuracy is judged solely through the
   energy drift, which scales with the floating point precision.
 

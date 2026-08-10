@@ -56,9 +56,15 @@ plot_energy_drift(df)
   about 2 iterations per step** at `Float32`/`Float64` (slightly more than the 2d
   case, ≈ 2.3), while **`Picard` never converges**. As for the 2d system, `Picard`
   is the only failure at `Float32`/`Float64`.
-- The stronger degeneracy makes **`Float16` fail even more readily** — the Newton
-  linear solve raises a singular-Jacobian error for most configurations. `Float32`
-  and `Float64` again give essentially the same convergence pattern.
+- The stronger degeneracy makes **the 16-bit formats fail readily** — the Newton
+  linear solve raises a singular-Jacobian error for most configurations.
+  `Float16` reaches 14/24 here but only 6/24 at the coarse step; `BFloat16`
+  manages 2/24 and 6/24. `Float32` and `Float64` (21/24 each) again give
+  essentially the same convergence pattern.
+- **`BFloat16` never beats `Float16`** here either — the two tie at 6/24 at the
+  coarse step, where the `BFloat16` time grid is not itself a limitation. As for
+  the [2d system](@ref lotka_volterra_2d_dt01), the obstacle is Jacobian
+  conditioning, which wants significand bits rather than exponent range.
 - This example demonstrates the harness's robustness: configurations that throw a
   `SingularException` (rather than merely diverging) are caught and recorded as
   non-converged instead of aborting the sweep.

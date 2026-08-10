@@ -55,7 +55,11 @@ plot_energy_drift(df; panelcol = :regularization)
 - The chaotic dynamics give a larger energy drift than the integrable examples,
   and the achievable step size is smaller — at ``\Delta t = 1.0`` and above the
   solve struggles.
-- `Float16` fails (singular Newton Jacobian).
+- **Only `Float64` converges at all** (9/16): `Float32`, `Float16` and `BFloat16`
+  all fail outright with a singular Newton Jacobian. Within `Float64`, `DogLeg`
+  converges for all four regularization factors, `StrongWolfe` for three and
+  `Backtracking` for two, while `Newton/Static` never does — the clearest
+  ordering of the four solver configurations anywhere in the study.
 
 ## Results table
 
