@@ -59,17 +59,29 @@ Build, dependency and CI notes for this repository.
   tests; building the docs there too would duplicate hours of compute and race the other
   build for `gh-pages`.
 
-!!! warning "The sweeps abort nondeterministically on the CI runners"
-    Julia sometimes dies mid-sweep with a silent `SIGABRT` — exit 134, `Aborted (core
-    dumped)`, no exception and no stack trace — most often on the Toda lattice. It has
-    not reproduced locally, and it is not tied to a code change: the run that first
-    showed it had `Sweep toda_lattice` abort and then the `documenter` job recompute the
-    same two sweeps successfully, on the same runner image and commit.
+!!! warning "The sweeps abort intermittently on the CI runners — cause unknown"
+    Julia sometimes dies mid-sweep with a silent `SIGABRT`: exit 134, `Aborted (core
+    dumped)`, no exception, no stack trace, nothing on stderr. What is established:
 
-    The `sweep` step therefore retries once and annotates the run with a warning when it
-    does. Because a crash leaves the sweeps it had already finished in the cache, the
-    retry recomputes only what is missing. If a page starts needing the retry every
-    time, that is no longer a flake and the warnings are how you will notice.
+    - It hits a different sweep each run — `toda_lattice` once, `nonlinear_pendulum` at
+      ``\Delta t = 0.1`` the next — and roughly one job per run.
+    - It does not reproduce locally; that sweep runs clean repeatedly on macOS/arm64.
+    - **Retrying does not help.** A retried step reuses the same runner and reproduced
+      the abort at the same point (66 s, then 63 s into `ExpandTemplates`).
+    - **It is not bound to a host either.** The `documenter` job then aborted on the same
+      sweep on a different runner, having recomputed a different sweep successfully in an
+      earlier run.
+
+    So it is neither a transient nor a property of one machine, and it is not caused by
+    any change in this repository — the same sweeps pass and fail across runs of the same
+    commit. The `Runner diagnostics` step records the Julia build, BLAS configuration, CPU
+    model and memory of every sweep job so that failing runs can be compared; a silent
+    `SIGABRT` in work dominated by small LU factorizations would be consistent with
+    OpenBLAS, which is the first thing to rule out.
+
+    Until it is understood, a run that trips it withholds the deployment. Re-running the
+    single failed job is the cheap way through — a few minutes, against the hour and a
+    half a monolithic build used to cost.
 - **Documenter inlines figures as base64**, so several figures per page comfortably
   exceed the default page-size limit. `size_threshold` (and
   `size_threshold_warn`) are raised in the `Documenter.HTML` block of

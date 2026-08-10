@@ -78,21 +78,22 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()
             Pkg.precompile()'
-      # Julia aborts here nondeterministically on these runners: a silent SIGABRT, no
-      # exception and no stack trace, most often on the Toda lattice. It does not
-      # reproduce locally, and the same sweeps complete on a second attempt — the run
-      # that prompted this retried them in the `documenter` job below and they passed.
-      # So retry once rather than withhold a deployment over one bad roll, and emit a
-      # warning annotation so that a page needing the retry regularly stays visible
-      # instead of looking clean. A crash part way through leaves the sweeps it already
-      # finished in the cache, so the retry only recomputes what is missing.
-      - name: Compute the sweeps
+      # Julia dies here intermittently with a silent SIGABRT — exit 134, `Aborted (core
+      # dumped)`, no exception and no stack trace. It has hit a different sweep each run,
+      # does not reproduce locally, and is not fixed by retrying: a retried step reuses the
+      # runner and reproduced the abort at the same point, and the `documenter` job then hit
+      # it on a *different* host recomputing the same sweep. Since the cause is not yet
+      # known, record what the host was so that failing runs can be compared.
+      - name: Runner diagnostics
         run: |
-          if julia --project=docs docs/make.jl; then
-            exit 0
-          fi
-          echo "::warning::${{ matrix.id }}: first attempt failed, retrying once"
-          julia --project=docs docs/make.jl
+          julia -e 'using InteractiveUtils; versioninfo(verbose = false)'
+          julia -e 'using LinearAlgebra; @show BLAS.get_config(); @show BLAS.get_num_threads()'
+          echo "--- cpu"
+          lscpu | grep -E "^(Model name|Vendor ID|CPU\(s\)|Flags)" | cut -c1-200
+          echo "--- memory"
+          free -g
+      - name: Compute the sweeps
+        run: julia --project=docs docs/make.jl
         env:
           DOCS_PAGES: ${{ matrix.page }}.md
           SOLVERBENCHMARK_SWEEPS: ${{ matrix.sweeps }}

@@ -67,11 +67,11 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   critical path — followed by a `documenter` job
   that collects their results, renders the site and deploys, and withholds the
   deployment when any sweep failed. `makedocs` is called with `pagesonly=true`, without
-  which each `sweep` job would expand every page and run the entire study. Each `sweep`
-  step retries once, because Julia aborts mid-sweep on these runners
-  nondeterministically (silent `SIGABRT`, no stack trace, most often on the Toda
-  lattice); the retry emits a warning annotation, so a page that comes to need it every
-  time is still visible.
+  which each `sweep` job would expand every page and run the entire study. Every sweep
+  job records the runner's Julia build, BLAS configuration, CPU model and memory, because
+  Julia aborts mid-sweep on these runners intermittently — a silent `SIGABRT` with no
+  stack trace, hitting a different sweep each run — and neither retrying on the same
+  runner nor moving to another host avoids it.
 - Benchmark rows carry the `f_abstol` each run was solved to, and `summary_table`
   adds an `at_tolerance` column marking converged rows whose `max_residual` is
   within a factor of ten of it — so "converged against a target too loose to be
