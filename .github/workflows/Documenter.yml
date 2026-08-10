@@ -20,34 +20,45 @@ permissions:
   contents: read
 
 jobs:
-  # One job per analysis page. Each runs `make.jl` restricted to its own page, which is
-  # not for the rendered output — that is discarded — but for the sweeps the page's
-  # `@example` blocks execute: `cached_sweep` writes them to `SOLVERBENCHMARK_SWEEP_CACHE`,
-  # and this job uploads that directory. The `documenter` job then renders the whole site
-  # from the collected CSVs without recomputing anything.
+  # Each job runs `make.jl` restricted to one page, which is not for the rendered output —
+  # that is discarded — but for the sweeps the page's `@example` blocks execute:
+  # `cached_sweep` writes them to `SOLVERBENCHMARK_SWEEP_CACHE`, and this job uploads that
+  # directory. The `documenter` job then renders the whole site from the collected CSVs
+  # without recomputing anything.
   #
-  # Page granularity is the natural unit because a page's sweeps are defined in the page.
-  # The nonlinear pages are the slow ones: three sweeps of 112 runs each, against two of
-  # 96 for the implicit-midpoint pages.
+  # `sweeps` splits a page finer than the page itself, by naming the cache keys this job
+  # is to compute; the page's other sweeps raise `SweepNotSelected` and are skipped. The
+  # implicit-midpoint pages take the whole page (two sweeps of 96 runs, and the slower of
+  # the two is the fine time step). The nonlinear pages get one job per time step: three
+  # sweeps of 112 runs each, and they set the critical path of the whole workflow, so
+  # splitting them is what shortens it.
   sweep:
-    name: Sweep ${{ matrix.page }}
+    name: Sweep ${{ matrix.id }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
-      # One diverging integrator must not stop the remaining pages from being computed.
+      # One diverging integrator must not stop the remaining sweeps from being computed.
       fail-fast: false
       matrix:
-        page:
-          - harmonic_oscillator
-          - pendulum
-          - lotka_volterra_2d
-          - lotka_volterra_4d
-          - double_pendulum
-          - toda_lattice
-          - nonlinear_harmonic_oscillator
-          - nonlinear_pendulum
-          - nonlinear_double_pendulum
-          - nonlinear_toda_lattice
+        include:
+          - { id: harmonic_oscillator,    page: harmonic_oscillator, sweeps: '' }
+          - { id: pendulum,               page: pendulum,            sweeps: '' }
+          - { id: lotka_volterra_2d,      page: lotka_volterra_2d,   sweeps: '' }
+          - { id: lotka_volterra_4d,      page: lotka_volterra_4d,   sweeps: '' }
+          - { id: double_pendulum,        page: double_pendulum,     sweeps: '' }
+          - { id: toda_lattice,           page: toda_lattice,        sweeps: '' }
+          - { id: nl_harmonic_oscillator_dt0.1,  page: nonlinear_harmonic_oscillator, sweeps: nonlinear_harmonic_oscillator_dt0.1 }
+          - { id: nl_harmonic_oscillator_dt1.0,  page: nonlinear_harmonic_oscillator, sweeps: nonlinear_harmonic_oscillator_dt1.0 }
+          - { id: nl_harmonic_oscillator_dt10.0, page: nonlinear_harmonic_oscillator, sweeps: nonlinear_harmonic_oscillator_dt10.0 }
+          - { id: nl_pendulum_dt0.1,             page: nonlinear_pendulum, sweeps: nonlinear_pendulum_dt0.1 }
+          - { id: nl_pendulum_dt1.0,             page: nonlinear_pendulum, sweeps: nonlinear_pendulum_dt1.0 }
+          - { id: nl_pendulum_dt10.0,            page: nonlinear_pendulum, sweeps: nonlinear_pendulum_dt10.0 }
+          - { id: nl_double_pendulum_dt0.1,      page: nonlinear_double_pendulum, sweeps: nonlinear_double_pendulum_dt0.1 }
+          - { id: nl_double_pendulum_dt1.0,      page: nonlinear_double_pendulum, sweeps: nonlinear_double_pendulum_dt1.0 }
+          - { id: nl_double_pendulum_dt10.0,     page: nonlinear_double_pendulum, sweeps: nonlinear_double_pendulum_dt10.0 }
+          - { id: nl_toda_lattice_dt0.1,         page: nonlinear_toda_lattice, sweeps: nonlinear_toda_lattice_dt0.1 }
+          - { id: nl_toda_lattice_dt1.0,         page: nonlinear_toda_lattice, sweeps: nonlinear_toda_lattice_dt1.0 }
+          - { id: nl_toda_lattice_dt10.0,        page: nonlinear_toda_lattice, sweeps: nonlinear_toda_lattice_dt10.0 }
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
@@ -75,19 +86,20 @@ jobs:
       # warning annotation so that a page needing the retry regularly stays visible
       # instead of looking clean. A crash part way through leaves the sweeps it already
       # finished in the cache, so the retry only recomputes what is missing.
-      - name: Compute the page's sweeps
+      - name: Compute the sweeps
         run: |
           if julia --project=docs docs/make.jl; then
             exit 0
           fi
-          echo "::warning::${{ matrix.page }}: first attempt failed, retrying once"
+          echo "::warning::${{ matrix.id }}: first attempt failed, retrying once"
           julia --project=docs docs/make.jl
         env:
           DOCS_PAGES: ${{ matrix.page }}.md
+          SOLVERBENCHMARK_SWEEPS: ${{ matrix.sweeps }}
           SOLVERBENCHMARK_SWEEP_CACHE: ${{ github.workspace }}/sweepcache
       - uses: actions/upload-artifact@v4
         with:
-          name: sweeps-${{ matrix.page }}
+          name: sweeps-${{ matrix.id }}
           path: sweepcache
           retention-days: 1
 

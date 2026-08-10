@@ -25,9 +25,9 @@ Build, dependency and CI notes for this repository.
 - The analysis pages regenerate their figures at build time inside `@example` blocks,
   with `timing = :quick, quiet = true`. A change to the benchmark therefore changes
   the docs, and a benchmark that errors breaks the build.
-- **The build is fanned out over one job per analysis page**, because running all
-  twenty-four sweeps in one job takes hours. Every sweep goes through
-  [`cached_sweep`](@ref), keyed by page and time step:
+- **The build is fanned out over eighteen jobs**, because running all twenty-four sweeps
+  in one job takes hours. Every sweep goes through [`cached_sweep`](@ref), keyed by page
+  and time step:
 
   | | |
   |:--|:--|
@@ -36,6 +36,15 @@ Build, dependency and CI notes for this repository.
 
   Measured on one page: 148 s computing versus 43 s from cache, so the assembling job
   is dominated by the fixed Documenter overhead rather than by the benchmark.
+- **`SOLVERBENCHMARK_SWEEPS` splits a page finer than the page**, naming the cache keys a
+  job is to compute; the page's other sweeps raise [`SweepNotSelected`](@ref) and are
+  skipped. The implicit-midpoint pages take a whole page each (two sweeps), while the
+  nonlinear pages get one job per time step — three sweeps of 112 runs apiece, and they
+  set the critical path of the workflow, so splitting them is what shortens it.
+- Adding a sweep to a page means adding it to the matrix in
+  `.github/workflows/Documenter.yml`. A key that no job claims is not an error: the
+  `documenter` job computes it itself, which shows as that job taking far longer than its
+  usual few minutes and as its `collected N sweeps` count falling short of 24.
 - **`pagesonly=true` is what makes the split work.** `pages` only builds the
   navigation; without `pagesonly` Documenter expands every `.md` under `docs/src`, and
   each `sweep` job would run the entire study instead of its own page. A page added to

@@ -26,7 +26,8 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   the nonlinear sweep's `regularization_factor` is now a function of the working
   precision rather than a number. Nonlinear rows carry the exponent and the value
   each one resolved to in `regularization_exponent`/`regularization_factor`.
-- `cached_sweep`/`sweep_cache_dir`, and a `DOCS_PAGES` knob on `docs/make.jl`: the
+- `cached_sweep`/`sweep_cache_dir`/`selected_sweeps`/`SweepNotSelected`, and a
+  `DOCS_PAGES` knob on `docs/make.jl`: the
   documentation build now fans out over one CI job per analysis page, each computing
   only that page's sweeps and passing the results to the job that renders the site.
   Without a cache directory configured it is a plain call, so a local
@@ -61,7 +62,9 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 - **The documentation is built by one workflow, not two.** `CI.yml` no longer carries a
   `Documentation` job: it duplicated the whole build and raced
   `.github/workflows/Documenter.yml` for the `gh-pages` branch. That workflow now runs a
-  `sweep` matrix of ten jobs — one per analysis page — followed by a `documenter` job
+  `sweep` matrix of eighteen jobs — a whole page for each implicit-midpoint problem, and
+  one job per time step for the nonlinear pages, whose three sweeps of 112 runs set the
+  critical path — followed by a `documenter` job
   that collects their results, renders the site and deploys, and withholds the
   deployment when any sweep failed. `makedocs` is called with `pagesonly=true`, without
   which each `sweep` job would expand every page and run the entire study. Each `sweep`

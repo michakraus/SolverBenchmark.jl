@@ -21,6 +21,41 @@ function sweep_cache_dir()
 end
 
 """
+    selected_sweeps()
+
+The set of sweep keys this build is asked to compute, from the comma-separated
+`SOLVERBENCHMARK_SWEEPS` environment variable, or `nothing` when it is unset — meaning
+"compute whatever is asked for".
+
+This is what splits a page finer than the page itself. The nonlinear pages carry three
+sweeps each and are the slowest jobs in the documentation build, so the workflow gives
+each of their time steps its own job, selecting one key per job.
+"""
+function selected_sweeps()
+    keys = get(ENV, "SOLVERBENCHMARK_SWEEPS", "")
+    isempty(keys) ? nothing : Set(strip.(split(keys, ",")))
+end
+
+"""
+    SweepNotSelected(key)
+
+Thrown by [`cached_sweep`](@ref) for a sweep that is neither cached nor selected by
+[`selected_sweeps`](@ref) — the other sweeps of a page whose job was given one of them.
+
+A job that raises this is doing its job: it computed its own sweep and declined the
+rest. Documenter is called with `warnonly` for such a build, so the blocks that go on
+to use the missing `DataFrame` are reported as warnings and the build still succeeds,
+which is all that is wanted from it — the rendered output is discarded and only the
+written CSVs are kept.
+"""
+struct SweepNotSelected <: Exception
+    key::String
+end
+
+Base.showerror(io::IO, e::SweepNotSelected) = print(io,
+    "sweep \"", e.key, "\" is not cached and not selected by SOLVERBENCHMARK_SWEEPS")
+
+"""
     cached_sweep(compute, key)
 
 Return the benchmark `DataFrame` for `key`: read from [`sweep_cache_dir`](@ref) if it
@@ -42,6 +77,10 @@ The round trip through CSV is lossless for everything the plots and
 [`summary_table`](@ref) read: `missing` comes back as `missing`, and a column that is
 entirely `missing` (`accuracy` on a problem with no analytic reference) comes back as
 `Missing`, which is what `drop_empty` and `any(!ismissing, ...)` already expect.
+
+Throws [`SweepNotSelected`](@ref) for a key that is neither cached nor listed in
+[`selected_sweeps`](@ref), which is how a job computes one of a page's sweeps and
+declines the others.
 """
 function cached_sweep(compute, key::AbstractString)
     dir = sweep_cache_dir()
@@ -49,6 +88,9 @@ function cached_sweep(compute, key::AbstractString)
 
     path = joinpath(dir, "$key.csv")
     isfile(path) && return DataFrame(CSV.File(path))
+
+    selected = selected_sweeps()
+    selected === nothing || key in selected || throw(SweepNotSelected(key))
 
     df = compute()
     mkpath(dir)
