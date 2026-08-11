@@ -59,42 +59,43 @@ Build, dependency and CI notes for this repository.
   tests; building the docs there too would duplicate hours of compute and race the other
   build for `gh-pages`.
 
-!!! warning "The sweeps abort on the newest CI runners"
-    Julia dies mid-sweep with a silent `SIGABRT` — exit 134, `Aborted (core dumped)`, no
-    exception, no stack trace, nothing on stderr even under a pty — and **it correlates
-    with the runner's microarchitecture, not with the sweep.** Over two full runs, by
-    `ORCJIT` target:
+!!! warning "The documentation is built on macOS with Julia 1.11, and why"
+    On Linux with Julia 1.12 (LLVM 18.1.7) the sweeps abort mid-run with a silent
+    `SIGABRT`: exit 134, no exception, no stack trace, nothing on stderr even under a pty.
+    A core dump named it:
 
-    | Target | Aborted | Passed |
-    |:-------|--------:|-------:|
-    | `znver5` (EPYC 9V45) | 3 | 0 |
-    | `graniterapids` (Xeon 6973P-C) | 2 | 0 |
-    | `sapphirerapids` (Xeon 8573C) | 2 | 1 |
-    | `znver4` (EPYC 9V74) | 0 | 6 |
-    | `znver3` (EPYC 7763) | 0 | 9 |
+    ```
+    llvm::SelectionDAGISel::CannotYetSelect(llvm::SDNode*)
+      → llvm::report_fatal_error → abort()
+    from JuliaOJIT::addModule ← jl_compile_codeinst_now ← jl_compile_method_internal
+    ```
 
-    The three newest cores in the fleet die, across both vendors; the older two never do,
-    nor does a local arm64 machine. That is why retrying on the same runner reproduces the
-    abort (66 s, then 63 s) while another job does the same work untouched, and why the
-    sweep that fails differs from run to run — the runner draw decides.
+    LLVM's X86 backend cannot select an instruction for a DAG node while the JIT compiles
+    a method, so it calls `report_fatal_error`. Because that aborts *inside LLVM*, it never
+    becomes a Julia exception — hence the silence. It is an upstream code-generation bug;
+    nothing in this repository is implicated, and the same commit passes and fails
+    depending only on which runner it draws.
 
-    Excluded by measurement: **BLAS threading** (`OPENBLAS_NUM_THREADS=1`) and **OpenBLAS
-    kernel dispatch** (`OPENBLAS_CORETYPE=Haswell`) — both left the abort untouched.
+    That is also why it looked so erratic. It hit a different sweep each run, because the
+    host's target features and which specialization gets compiled decide, not the
+    benchmark. Retrying was useless (the same runner reproduced it at 66 s, then 63 s), and
+    it never reproduced on arm64. Failures fell mostly on the newest cores — `znver5`,
+    `graniterapids`, `sapphirerapids` — but not exclusively, so the microarchitecture is a
+    tendency and the backtrace is the fact.
+
+    Ruled out along the way, each by a test that actually ran: **BLAS threading**
+    (`OPENBLAS_NUM_THREADS=1`) and **OpenBLAS kernel dispatch** (`OPENBLAS_CORETYPE`).
 
     !!! note "`JULIA_CPU_TARGET` cannot be probed by setting it for the run"
-        It does not invalidate the pkgimages, so Julia reuses the ones already built for
-        the native target and nothing is tested; the attempt then reports code generation
-        as excluded when it was never exercised. The tell is timing — a no-op reaches
-        `ExpandTemplates` half a minute later, where a genuine precompile of this stack
-        takes eleven minutes. Testing it properly means setting the variable for the whole
-        job *and* disabling the depot cache, so everything is built under the new target.
+        It does not invalidate the pkgimages, so Julia reuses the ones built for the native
+        target and nothing is tested — while the attempt reports code generation as
+        excluded. The tell is timing: a no-op reaches `ExpandTemplates` half a minute
+        later, where a genuine precompile of this stack takes eleven minutes.
 
-    Since toggling environment variables has run out of candidates, the step now enables
-    core dumps and, on an abort, hands the core to `gdb` for a backtrace. That should name
-    the library rather than leave it to be guessed at, which is the point this has reached.
-
-    A run that aborts still withholds the deployment. Re-running that single job is the
-    cheap way through: a few minutes, and it will likely land on an older host.
+    So both jobs run on `macos-latest` with Julia `1.11`: arm64 uses a different LLVM
+    backend, and 1.11 predates this LLVM. Revisit once a Julia release carries a fixed
+    LLVM — the pin is a workaround for an upstream bug, not a requirement of this package,
+    which supports 1.11 upwards and is tested across all three platforms by `CI.yml`.
 - **Documenter inlines figures as base64**, so several figures per page comfortably
   exceed the default page-size limit. `size_threshold` (and
   `size_threshold_warn`) are raised in the `Documenter.HTML` block of

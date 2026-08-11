@@ -68,13 +68,17 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   that collects their results, renders the site and deploys, and withholds the
   deployment when any sweep failed. `makedocs` is called with `pagesonly=true`, without
   which each `sweep` job would expand every page and run the entire study.
-- **Sweep jobs record the runner they ran on, and narrow the abort when it happens.**
-  Julia dies mid-sweep with a silent `SIGABRT` on the newest runners: over two runs, every
-  job on `znver5`, `graniterapids` or `sapphirerapids` aborted (7 of 8) and none on
-  `znver3` or `znver4` did (0 of 15), which is why the failing sweep differed from run to
-  run and why retrying on the same runner reproduced it. BLAS threading and OpenBLAS kernel
-  dispatch are both excluded by measurement, so after an abort the step now dumps core and
-  hands it to `gdb` for a backtrace rather than guessing at further environment toggles.
+- **The documentation is built on macOS with Julia 1.11.** On Linux with Julia 1.12
+  (LLVM 18.1.7) the sweeps abort mid-run with a silent `SIGABRT`; a core dump identified
+  `llvm::SelectionDAGISel::CannotYetSelect` — LLVM's X86 backend failing to select an
+  instruction while the JIT compiles a method, calling `report_fatal_error` and so
+  `abort()`. Aborting inside LLVM is why it never became a Julia exception and produced no
+  error at all. It is an upstream code-generation bug: the same commit passed or failed
+  depending only on which runner it drew, and BLAS threading and OpenBLAS kernel dispatch
+  were both tested and exonerated. arm64 has never reproduced it, and 1.11 predates that
+  LLVM. The pin is a workaround, to be lifted when a Julia release carries a fixed LLVM;
+  `CI.yml` continues to test the package on 1.11, 1 and nightly across all three
+  platforms.
 - Benchmark rows carry the `f_abstol` each run was solved to, and `summary_table`
   adds an `at_tolerance` column marking converged rows whose `max_residual` is
   within a factor of ten of it — so "converged against a target too loose to be

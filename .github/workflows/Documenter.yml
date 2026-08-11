@@ -34,7 +34,7 @@ jobs:
   # splitting them is what shortens it.
   sweep:
     name: Sweep ${{ matrix.id }}
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     timeout-minutes: 120
     strategy:
       # One diverging integrator must not stop the remaining sweeps from being computed.
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
-          version: '1'
+          version: '1.11'
       # All jobs of this workflow share one depot cache: the default cache name includes
       # the job name and the matrix values, which would give one near-identical cache per
       # matrix cell and a cold cache in the `documenter` job.
@@ -78,75 +78,31 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()
             Pkg.precompile()'
-      # Julia dies here intermittently with a silent SIGABRT — exit 134, `Aborted (core
-      # dumped)`, no exception and no stack trace, not even under a pty.
+      # Pinned to Julia 1.11 on macOS. On Linux with Julia 1.12 (LLVM 18.1.7) these
+      # sweeps abort mid-run with a silent SIGABRT, which a core dump identified as
+      # `llvm::SelectionDAGISel::CannotYetSelect` — LLVM's X86 backend failing to select an
+      # instruction while the JIT compiles a method, calling `report_fatal_error` and so
+      # `abort()`. Because it aborts inside LLVM it never becomes a Julia exception, which
+      # is why it produced no error, no stack trace and nothing on stderr even under a pty.
+      # It hit a different sweep each run — the host's target features and which
+      # specialization is compiled decide, not the benchmark — so retrying was useless.
+      # Neither BLAS threading nor OpenBLAS kernel dispatch was involved; both were tested
+      # and changed nothing.
       #
-      # It correlates with the runner's microarchitecture, not with the sweep. Over two
-      # full runs, by `ORCJIT` target:
-      #
-      #   znver5 (EPYC 9V45)          3 aborted   0 passed
-      #   graniterapids (Xeon 6973P)  2 aborted   0 passed
-      #   sapphirerapids (Xeon 8573C) 2 aborted   1 passed
-      #   znver4 (EPYC 9V74)          0 aborted   6 passed
-      #   znver3 (EPYC 7763)          0 aborted   9 passed
-      #
-      # So it is the three newest cores in the fleet that die, across both vendors — an
-      # earlier reading of a single run as "Intel" was over-fitted. This is why retrying on
-      # the same runner cannot help, and why the sweep that fails differs run to run: the
-      # runner draw decides. It never reproduces locally, on arm64.
-      #
-      # These diagnostics are what established that, and are kept so the correlation can be
-      # rechecked as the fleet changes.
+      # arm64 macOS uses a different LLVM backend entirely and has never reproduced it, on
+      # CI or locally. Revisit once a Julia release carries a fixed LLVM.
       - name: Runner diagnostics
         run: |
-          # Write cores to a fixed place rather than piping them to apport, which is not
-          # installed here, so that the sweep step can hand one to gdb.
-          sudo sysctl -w kernel.core_pattern=/tmp/core.%e.%p
           julia -e 'using InteractiveUtils; versioninfo(verbose = false)'
           julia -e 'using LinearAlgebra; @show BLAS.get_config(); @show BLAS.get_num_threads()'
-          echo "--- cpu"
-          lscpu | grep -E "^(Model name|Vendor ID|CPU\(s\)):"
-          # named separately because the full flag list is long and gets truncated:
-          # AVX-512 half precision is Intel-only here and the sweeps run at `Float16`
-          echo "avx512: $(lscpu | grep -oE 'avx512[a-z0-9_]*' | sort -u | tr '\n' ' ')"
-          echo "--- memory"
-          free -g
-      # Each attempt below removes one candidate cause and says so in the log, which turns
-      # the next Intel draw into a measurement rather than another mystery.
-      #
-      # Under a pty throughout: Julia buffers `stdout`/`stderr` when they are pipes, so
-      # `script` gives it a terminal and nothing written just before the abort is lost to
-      # the buffer. `-e` propagates the command's exit status rather than `script`'s. (This
-      # did not make the crash say anything, so it prints nothing at all — but it is how a
-      # message would reach the log if there were one.)
+          sysctl -n machdep.cpu.brand_string
+          echo "memory: $(( $(sysctl -n hw.memsize) / 1024 / 1024 / 1024 )) GB, $(sysctl -n hw.ncpu) cores"
+      # Under a pty: Julia buffers `stdout`/`stderr` when they are pipes, as they are here,
+      # so a twenty-minute sweep would show nothing until it finished. BSD `script` takes
+      # the command as trailing arguments rather than util-linux's `-e -c`, and propagates
+      # the command's exit status (verified: `exit 7` gives 7, an abort gives 6).
       - name: Compute the sweeps
-        run: |
-          run_sweep() { script -q -e -c "julia --project=docs docs/make.jl" /dev/null; }
-
-          ulimit -c unlimited
-
-          if run_sweep; then exit 0; fi
-
-          # Guessing at the cause by toggling environment variables has run out: BLAS
-          # threading and OpenBLAS kernel dispatch both changed nothing, and
-          # `JULIA_CPU_TARGET` cannot be tested this way at all — it does not invalidate
-          # the pkgimages, so the "rebuild" is a no-op that reaches `ExpandTemplates`
-          # half a minute later where a real precompile of this stack takes eleven
-          # minutes. Get the backtrace instead and let it name the library.
-          echo "::warning::${{ matrix.id }}: aborted, extracting a backtrace"
-          ls -la /tmp/core.* 2>/dev/null || true
-          core=$(ls -t /tmp/core.* 2>/dev/null | head -1)
-          if [ -z "$core" ]; then
-            echo "no core file was written; core_pattern is $(cat /proc/sys/kernel/core_pattern)"
-            exit 134
-          fi
-          # `apt-get install` alone fails on a runner with stale lists, and swallowing its
-          # output hid that as a bare `gdb: command not found` after the core had been
-          # captured — so update first and let any failure be visible.
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq gdb
-          gdb -batch -ex "thread apply all bt" "$(command -v julia)" "$core" 2>&1 | tail -150
-          exit 134
+        run: script -q /dev/null julia --project=docs docs/make.jl
         env:
           DOCS_PAGES: ${{ matrix.page }}.md
           SOLVERBENCHMARK_SWEEPS: ${{ matrix.sweeps }}
@@ -165,7 +121,7 @@ jobs:
     # at; the deployment itself is gated on a complete run below. `!cancelled()` still
     # respects cancellation through the `concurrency` group.
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     timeout-minutes: 60
     permissions:
       contents: write
@@ -173,7 +129,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
-          version: '1'
+          version: '1.11'
       - uses: julia-actions/cache@v3
         with:
           cache-name: julia-cache;workflow=${{ github.workflow }}
@@ -204,10 +160,10 @@ jobs:
         run: |
           ls -la sweepcache
           echo "collected $(ls sweepcache/*.csv 2>/dev/null | wc -l) sweeps (expected 24)"
-      # Under a pty for the same reason as the sweep jobs: this build aborted once too,
-      # recomputing a sweep that no job had produced, and buffered output would be lost.
+      # Under a pty for the same reason as the sweep jobs: this build runs for minutes and
+      # buffered output would only appear at the end. BSD `script` form, as on macOS.
       - name: Build and deploy
-        run: script -q -e -c "julia --project=docs docs/make.jl" /dev/null
+        run: script -q /dev/null julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
