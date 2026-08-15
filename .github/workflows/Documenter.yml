@@ -107,7 +107,7 @@ jobs:
           DOCS_PAGES: ${{ matrix.page }}.md
           SOLVERBENCHMARK_SWEEPS: ${{ matrix.sweeps }}
           SOLVERBENCHMARK_SWEEP_CACHE: ${{ github.workspace }}/sweepcache
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sweeps-${{ matrix.id }}
           path: sweepcache
@@ -173,7 +173,7 @@ jobs:
       # Nothing was deployed in that case, so keep the site around for inspection.
       - name: Upload the site of an incomplete build
         if: ${{ always() && needs.sweep.result != 'success' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: documenter-site
           path: docs/build
