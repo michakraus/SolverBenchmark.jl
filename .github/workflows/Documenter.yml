@@ -148,7 +148,7 @@ jobs:
             DocMeta.setdocmeta!(SolverBenchmark, :DocTestSetup, :(using SolverBenchmark); recursive=true)
             doctest(SolverBenchmark)'
       - name: Collect the computed sweeps
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: sweeps-*
           merge-multiple: true
