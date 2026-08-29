@@ -43,7 +43,7 @@ NonlinearIntegrators = "0.2"
 PrettyTables = "3.4.0"
 Printf = "1"
 QuadratureRules = "0.1"
-SimpleSolvers = "0.10.1"
+SimpleSolvers = "0.10.1, 0.13"
 julia = "1.11"
 
 [extras]
