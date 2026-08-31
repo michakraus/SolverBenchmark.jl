@@ -1,7 +1,7 @@
 using SolverBenchmark
 using Documenter
 
-DocMeta.setdocmeta!(SolverBenchmark, :DocTestSetup, :(using SolverBenchmark); recursive=true)
+DocMeta.setdocmeta!(SolverBenchmark, :DocTestSetup, :(using SolverBenchmark); recursive = true)
 
 const PAGES = [
     "Home" => "index.md",
@@ -11,21 +11,21 @@ const PAGES = [
         "Lotka–Volterra (2d)" => "lotka_volterra_2d.md",
         "Lotka–Volterra (4d)" => "lotka_volterra_4d.md",
         "Double Pendulum" => "double_pendulum.md",
-        "Toda Lattice" => "toda_lattice.md",
+        "Toda Lattice" => "toda_lattice.md"
     ],
     "Nonlinear Integrator" => [
         "Harmonic Oscillator" => "nonlinear_harmonic_oscillator.md",
         "Pendulum" => "nonlinear_pendulum.md",
         "Double Pendulum" => "nonlinear_double_pendulum.md",
-        "Toda Lattice" => "nonlinear_toda_lattice.md",
+        "Toda Lattice" => "nonlinear_toda_lattice.md"
     ],
     "Key Findings" => "findings.md",
     "API" => "api.md",
     "Development" => [
         "Internals" => "internals.md",
         "Low-Precision Support" => "precision.md",
-        "Maintenance" => "maintenance.md",
-    ],
+        "Maintenance" => "maintenance.md"
+    ]
 ]
 
 # Keep only the entries of a (possibly nested) `pages` list whose source file is in
@@ -50,30 +50,30 @@ end
 # `@example` blocks run, which `cached_sweep` writes to `SOLVERBENCHMARK_SWEEP_CACHE`
 # for the job that assembles the real site. Because the omitted pages are genuinely
 # absent, their cross-references cannot resolve, so a partial build only warns.
-const wanted  = filter(!isempty, strip.(split(get(ENV, "DOCS_PAGES", ""), ",")))
+const wanted = filter(!isempty, strip.(split(get(ENV, "DOCS_PAGES", ""), ",")))
 const partial = !isempty(wanted)
-const pages   = partial ? select_pages(PAGES, wanted) : PAGES
+const pages = partial ? select_pages(PAGES, wanted) : PAGES
 
 partial && isempty(pages) && error("DOCS_PAGES matched no page: $(join(wanted, ", "))")
 
 makedocs(;
-    modules=[SolverBenchmark],
-    authors="Michael Kraus",
-    sitename="SolverBenchmark.jl",
-    format=Documenter.HTML(;
-        canonical="https://michakraus.github.io/SolverBenchmark.jl",
-        edit_link="main",
-        assets=String[],
+    modules = [SolverBenchmark],
+    authors = "Michael Kraus",
+    sitename = "SolverBenchmark.jl",
+    format = Documenter.HTML(;
+        canonical = "https://michakraus.github.io/SolverBenchmark.jl",
+        edit_link = "main",
+        assets = String[],
         # analysis pages embed several figures as base64, exceeding the default limit
-        size_threshold=2_000_000,
-        size_threshold_warn=1_000_000,
+        size_threshold = 2_000_000,
+        size_threshold_warn = 1_000_000
     ),
     pages,
     # `pages` only builds the navigation: without this, Documenter expands *every* `.md`
     # under `docs/src`, so a partial build would run every sweep in the study rather than
     # the one page's. Every page is listed above, so this discards nothing in a full build.
-    pagesonly=true,
-    warnonly=partial,
+    pagesonly = true,
+    warnonly = partial
 )
 
 # Publish a complete site only. `DEPLOY_DOCS` is how the workflow withholds a
@@ -81,7 +81,7 @@ makedocs(;
 # pages from the published documentation.
 if !partial && get(ENV, "DEPLOY_DOCS", "true") == "true"
     deploydocs(;
-        repo="github.com/michakraus/SolverBenchmark.jl",
-        devbranch="main",
+        repo = "github.com/michakraus/SolverBenchmark.jl",
+        devbranch = "main"
     )
 end

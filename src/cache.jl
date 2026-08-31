@@ -52,8 +52,10 @@ struct SweepNotSelected <: Exception
     key::String
 end
 
-Base.showerror(io::IO, e::SweepNotSelected) = print(io,
-    "sweep \"", e.key, "\" is not cached and not selected by SOLVERBENCHMARK_SWEEPS")
+function Base.showerror(io::IO, e::SweepNotSelected)
+    print(io,
+        "sweep \"", e.key, "\" is not cached and not selected by SOLVERBENCHMARK_SWEEPS")
+end
 
 """
     cached_sweep(compute, key)

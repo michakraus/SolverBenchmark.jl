@@ -5,12 +5,14 @@
 const _PRECISION_ORDER = ["BFloat16", "Float16", "Float32", "Float64"]
 
 # Display order for the initial guesses (panels/rows in the plots and tables).
-const _INITIAL_GUESS_ORDER = ["NoInitialGuess", "HermiteExtrapolation", "MidpointExtrapolation"]
+const _INITIAL_GUESS_ORDER = [
+    "NoInitialGuess", "HermiteExtrapolation", "MidpointExtrapolation"]
 
 # Display order for the regularization panels of the nonlinear sweep: the λ = 0
 # control first, then the ladder rungs in increasing order of the shift.
-const _REGULARIZATION_ORDER =
-    ["λ = 0"; [scaled_regularization(rung).name for rung in eachindex(_REG_EXPONENTS_LOW)]]
+const _REGULARIZATION_ORDER = ["λ = 0";
+                               [scaled_regularization(rung).name
+                                for rung in eachindex(_REG_EXPONENTS_LOW)]]
 
 # The default `panel_order` covers both experiment sets at once. The two label sets are
 # disjoint, so one list serves `:initial_guess` and `:regularization` alike and no call
@@ -54,19 +56,20 @@ appears only if `df` carries the `f_abstol` column that `run_case` records, and
 with `drop_empty = true` only if at least one row is flagged.
 """
 function summary_table(df::DataFrame; panelcol::Symbol = :initial_guess,
-                       panel_order = _PANEL_ORDER, drop_empty::Bool = true)
+        panel_order = _PANEL_ORDER, drop_empty::Bool = true)
     cols = [:precision, :solver_label, panelcol, :converged,
-            :iterations_mean, :runtime_s, :max_residual, :at_tolerance,
-            :energy_drift, :accuracy]
+        :iterations_mean, :runtime_s, :max_residual, :at_tolerance,
+        :energy_drift, :accuracy]
     df = _flag_at_tolerance(df)
     out = select(df, intersect(cols, propertynames(df)))
 
     porder = Dict(p => i for (i, p) in enumerate(_PRECISION_ORDER))
     sorder = Dict(s => i for (i, s) in enumerate(unique(df.solver_label)))
     gorder = Dict(g => i for (i, g) in enumerate(_ordered(df[!, panelcol], panel_order)))
-    sort!(out, [DataFrames.order(:precision, by = p -> get(porder, p, 99)),
-                DataFrames.order(:solver_label, by = s -> get(sorder, s, 99)),
-                DataFrames.order(panelcol, by = g -> get(gorder, g, 99))])
+    sort!(out,
+        [DataFrames.order(:precision, by = p -> get(porder, p, 99)),
+            DataFrames.order(:solver_label, by = s -> get(sorder, s, 99)),
+            DataFrames.order(panelcol, by = g -> get(gorder, g, 99))])
 
     if drop_empty
         for c in names(out)
@@ -74,7 +77,8 @@ function summary_table(df::DataFrame; panelcol::Symbol = :initial_guess,
         end
         # unlike the metric columns this one is never `missing`; it earns its width
         # only when it has something to say
-        "at_tolerance" in names(out) && !any(out.at_tolerance) && select!(out, Not(:at_tolerance))
+        "at_tolerance" in names(out) && !any(out.at_tolerance) &&
+            select!(out, Not(:at_tolerance))
     end
     out
 end
@@ -130,23 +134,23 @@ axes, non-positive values) are omitted. With `converged_only = true` only
 converged runs are shown (a missing bar/marker then means "did not converge").
 """
 function comparison_figure(df::DataFrame, valcol::Symbol;
-                           ylabel::AbstractString = string(valcol),
-                           yscale = identity,
-                           title::AbstractString = "",
-                           converged_only::Bool = false,
-                           panelcol::Symbol = :initial_guess,
-                           panel_order = _PANEL_ORDER)
+        ylabel::AbstractString = string(valcol),
+        yscale = identity,
+        title::AbstractString = "",
+        converged_only::Bool = false,
+        panelcol::Symbol = :initial_guess,
+        panel_order = _PANEL_ORDER)
 
     # category axes come from the full grid so failing configs keep their tick
-    igs     = _ordered(df[!, panelcol], panel_order)
+    igs = _ordered(df[!, panelcol], panel_order)
     solvers = unique(df.solver_label)
-    precs   = filter(p -> p in df.precision, _PRECISION_ORDER)
+    precs = filter(p -> p in df.precision, _PRECISION_ORDER)
     converged_only && (df = df[df.converged, :])
-    nprec   = length(precs)
-    colors  = cgrad(:viridis, max(nprec, 2); categorical = true)
-    islog   = yscale in (log10, log2, log)
+    nprec = length(precs)
+    colors = cgrad(:viridis, max(nprec, 2); categorical = true)
+    islog = yscale in (log10, log2, log)
 
-    fig  = Figure(size = (340 * length(igs) + 180, 480))
+    fig = Figure(size = (340 * length(igs) + 180, 480))
     axes = Axis[]
     for (j, ig) in enumerate(igs)
         ax = Axis(fig[1, j];
@@ -159,7 +163,8 @@ function comparison_figure(df::DataFrame, valcol::Symbol;
         sub = df[df[!, panelcol] .== ig, :]
 
         for (pi, p) in enumerate(precs)
-            xs = Float64[]; ys = Float64[]
+            xs = Float64[]
+            ys = Float64[]
             for (si, s) in enumerate(solvers)
                 r = sub[(sub.solver_label .== s) .& (sub.precision .== p), :]
                 isempty(r) && continue
@@ -169,7 +174,8 @@ function comparison_figure(df::DataFrame, valcol::Symbol;
                 isfinite(vf) || continue
                 (islog && vf <= 0) && continue
                 offset = nprec == 1 ? 0.0 : (pi - (nprec + 1) / 2) * (0.72 / nprec)
-                push!(xs, si + offset); push!(ys, vf)
+                push!(xs, si + offset)
+                push!(ys, vf)
             end
             isempty(xs) && continue
             if islog
@@ -182,8 +188,10 @@ function comparison_figure(df::DataFrame, valcol::Symbol;
     end
     length(axes) > 1 && linkyaxes!(axes...)
 
-    elems = islog ? [MarkerElement(marker = :circle, color = colors[i], markersize = 12) for i in 1:nprec] :
-                    [PolyElement(polycolor = colors[i]) for i in 1:nprec]
+    elems = islog ?
+            [MarkerElement(marker = :circle, color = colors[i], markersize = 12)
+             for i in 1:nprec] :
+            [PolyElement(polycolor = colors[i]) for i in 1:nprec]
     Legend(fig[1, length(igs) + 1], elems, precs, "precision")
 
     isempty(title) || Label(fig[0, :], title; fontsize = 18, font = :bold)
@@ -196,26 +204,30 @@ end
 Grouped bar chart of the mean number of nonlinear-solver iterations per time step
 (converged runs only).
 """
-plot_iterations(df::DataFrame; title = "", kwargs...) =
+function plot_iterations(df::DataFrame; title = "", kwargs...)
     comparison_figure(df, :iterations_mean; ylabel = "mean iterations / step",
         converged_only = true, title, kwargs...)
+end
 
 """
     plot_runtime(df; title = "")
 
 Comparison of the integration run time (seconds, logarithmic axis; converged runs only).
 """
-plot_runtime(df::DataFrame; title = "", kwargs...) =
+function plot_runtime(df::DataFrame; title = "", kwargs...)
     comparison_figure(df, :runtime_s; ylabel = "runtime [s]", yscale = log10,
         converged_only = true, title, kwargs...)
+end
 
 """
     plot_energy_drift(df; title = "")
 
 Comparison of the energy (invariant) drift `|H(t_end) - H(t_0)|` (logarithmic axis).
 """
-plot_energy_drift(df::DataFrame; title = "", kwargs...) =
-    comparison_figure(df, :energy_drift; ylabel = "energy drift", yscale = log10, title, kwargs...)
+function plot_energy_drift(df::DataFrame; title = "", kwargs...)
+    comparison_figure(
+        df, :energy_drift; ylabel = "energy drift", yscale = log10, title, kwargs...)
+end
 
 """
     plot_accuracy(df; title = "")
@@ -223,8 +235,10 @@ plot_energy_drift(df::DataFrame; title = "", kwargs...) =
 Comparison of the maximum error against the analytic solution (logarithmic axis).
 Only meaningful for problems that provide a reference solution.
 """
-plot_accuracy(df::DataFrame; title = "", kwargs...) =
-    comparison_figure(df, :accuracy; ylabel = "max error vs. analytic", yscale = log10, title, kwargs...)
+function plot_accuracy(df::DataFrame; title = "", kwargs...)
+    comparison_figure(
+        df, :accuracy; ylabel = "max error vs. analytic", yscale = log10, title, kwargs...)
+end
 
 """
     plot_convergence(df; title = "", panelcol = :initial_guess,
@@ -236,11 +250,11 @@ for the nonlinear-integrator sweep), with solver configurations on the x-axis
 and precisions on the y-axis. Green cells converged, red cells did not.
 """
 function plot_convergence(df::DataFrame; title::AbstractString = "",
-                          panelcol::Symbol = :initial_guess,
-                          panel_order = _PANEL_ORDER)
-    igs     = _ordered(df[!, panelcol], panel_order)
+        panelcol::Symbol = :initial_guess,
+        panel_order = _PANEL_ORDER)
+    igs = _ordered(df[!, panelcol], panel_order)
     solvers = unique(df.solver_label)
-    precs   = filter(p -> p in df.precision, _PRECISION_ORDER)
+    precs = filter(p -> p in df.precision, _PRECISION_ORDER)
 
     # the heatmap has one row per precision, so grow the figure with `precs`
     # rather than letting the rows squeeze (250 + 30·3 = 340, the former height)
@@ -254,6 +268,7 @@ function plot_convergence(df::DataFrame; title::AbstractString = "",
         sub = df[df[!, panelcol] .== ig, :]
         M = fill(NaN, length(solvers), length(precs))
         for (si, s) in enumerate(solvers), (pj, p) in enumerate(precs)
+
             r = sub[(sub.solver_label .== s) .& (sub.precision .== p), :]
             isempty(r) || (M[si, pj] = r[1, :converged] ? 1.0 : 0.0)
         end

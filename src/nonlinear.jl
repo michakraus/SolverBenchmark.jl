@@ -44,7 +44,8 @@ function harmonic_oscillator_lode_spec(; q₀ = [0.5], p₀ = [0.0], timespan = 
     # from `sol.q[0]` alone.
     t₀ = timespan[1]
     p̄₀ = p₀[1]
-    reference = (t, x₀, params) -> [HarmonicOscillator.exact_solution_q(t, x₀[1], p̄₀, t₀, params)]
+    reference = (t, x₀, params) -> [HarmonicOscillator.exact_solution_q(
+        t, x₀[1], p̄₀, t₀, params)]
 
     ProblemSpec("HarmonicOscillatorLODE", builder, energy, reference; f_abstol_factor = 256)
 end
@@ -171,11 +172,11 @@ activations against the ReLU baseline; the `k` keyword is used only by the defau
 `relu_k(k)` and is ignored when an explicit `activation` is passed.
 """
 function nonlinear_onelayer_method(::Type{T}; R = 8, S = 4, k = 3,
-                                   bias_interval = [-π, π],
-                                   dict_amount = NONLINEAR_DICT_AMOUNT,
-                                   activation = relu_k(k),
-                                   initial_guess_method = OGA1d_Legacy()) where {T}
-    network    = OneLayerNetwork_GML{T}(activation, S)
+        bias_interval = [-π, π],
+        dict_amount = NONLINEAR_DICT_AMOUNT,
+        activation = relu_k(k),
+        initial_guess_method = OGA1d_Legacy()) where {T}
+    network = OneLayerNetwork_GML{T}(activation, S)
     quadrature = GaussLegendreQuadrature(T, R)
     # `OGA1d_Legacy` (a Float64-island OGA) is the default rather than
     # NonlinearIntegrators' own default `OGA1d` (a working-precision QR seed),
@@ -197,12 +198,14 @@ Return the reduced list of [`SolverConfig`](@ref)s benchmarked for the nonlinear
 integrator: `Newton` with the `Static`, `Backtracking` and `StrongWolfe` line
 searches, plus `DogLeg` (which takes no line search) — four configurations.
 """
-nonlinear_solver_configs() = [
-    SolverConfig("Newton", "Static",       Newton(), T -> Static(T)),
-    SolverConfig("Newton", "Backtracking", Newton(), T -> Backtracking(T)),
-    SolverConfig("Newton", "StrongWolfe",  Newton(), T -> StrongWolfe(T)),
-    SolverConfig("DogLeg", "",             DogLeg(), nothing),
-]
+function nonlinear_solver_configs()
+    [
+        SolverConfig("Newton", "Static", Newton(), T -> Static(T)),
+        SolverConfig("Newton", "Backtracking", Newton(), T -> Backtracking(T)),
+        SolverConfig("Newton", "StrongWolfe", Newton(), T -> StrongWolfe(T)),
+        SolverConfig("DogLeg", "", DogLeg(), nothing)
+    ]
+end
 
 """
     nonlinear_regularization_factors()
@@ -218,9 +221,10 @@ multiples of `√eps(T)` rather than absolute numbers: a shift small enough to b
 at `Float64` falls below the rounding error of a `Float16` Jacobian and cannot lift a
 singular one there.
 """
-nonlinear_regularization_factors() =
+function nonlinear_regularization_factors()
     [RegularizationConfig(0.0);
      [scaled_regularization(rung) for rung in eachindex(_REG_EXPONENTS_LOW)]]
+end
 
 # The identifying columns of a nonlinear-benchmark row, and the row recorded when
 # a combination cannot be run at all. Shared by `run_nonlinear_case` (which fails
@@ -232,22 +236,23 @@ nonlinear_regularization_factors() =
 # recorded next to `max_residual`. The exponent is `missing` for a fixed-value config,
 # which has no rung.
 function _nonlinear_row_base(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig,
-                             reg::RegularizationConfig) where {T}
+        reg::RegularizationConfig) where {T}
     (problem = spec.name, precision = precision_label(T),
-     solver = scfg.solver_name, linesearch = scfg.linesearch_name,
-     solver_label = solver_label(scfg), regularization = reg.name,
-     regularization_exponent = reg.rung === nothing ? missing :
-                               regularization_exponent(T, reg.rung),
-     regularization_factor = Float64(reg.factor(T)),
-     f_abstol = Float64(spec.f_abstol_factor * eps(T)))
+        solver = scfg.solver_name, linesearch = scfg.linesearch_name,
+        solver_label = solver_label(scfg), regularization = reg.name,
+        regularization_exponent = reg.rung === nothing ? missing :
+                                  regularization_exponent(T, reg.rung),
+        regularization_factor = Float64(reg.factor(T)),
+        f_abstol = Float64(spec.f_abstol_factor * eps(T)))
 end
 
-_nonlinear_missing_row(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig,
-                       reg::RegularizationConfig) where {T} =
+function _nonlinear_missing_row(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig,
+        reg::RegularizationConfig) where {T}
     (; _nonlinear_row_base(spec, T, scfg, reg)..., converged = false,
-     iterations_total = missing, iterations_mean = missing,
-     runtime_s = missing, max_residual = missing,
-     energy_drift = missing, accuracy = missing)
+        iterations_total = missing, iterations_mean = missing,
+        runtime_s = missing, max_residual = missing,
+        energy_drift = missing, accuracy = missing)
+end
 
 """
     run_nonlinear_case(spec, T, scfg, reg, method; timing = :quick,
@@ -264,69 +269,73 @@ semantics.
 `Real` is also accepted and means the same factor at every precision.
 """
 function run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig,
-                            reg::RegularizationConfig, method;
-                            timing::Symbol = :quick, max_iterations::Integer = 1000,
-                            quiet::Bool = false) where {T}
-
+        reg::RegularizationConfig, method;
+        timing::Symbol = :quick, max_iterations::Integer = 1000,
+        quiet::Bool = false) where {T}
     base = _nonlinear_row_base(spec, T, scfg, reg)
     missing_row = _nonlinear_missing_row(spec, T, scfg, reg)
 
     _maybe_quiet(quiet) do
-    try
-        prob   = spec.builder(T)
-        params = GIB.parameters(prob)
+        try
+            prob = spec.builder(T)
+            params = GIB.parameters(prob)
 
-        opts = merge(_solver_options(T; max_iterations, f_abstol = spec.f_abstol_factor * eps(T)),
-                     (; regularization_factor = reg.factor(T)))
-        int  = if scfg.linesearch === nothing
-            GeometricIntegrator(prob, method; solver = scfg.solver, opts...)
-        else
-            GeometricIntegrator(prob, method; solver = scfg.solver,
-                linesearch = scfg.linesearch(T), opts...)
-        end
-
-        res = _drive!(int, prob)
-
-        runtime = if timing === :benchmark
-            @belapsed _drive!($int, $prob) samples = 100 seconds = 2
-        elseif timing === :quick
-            @elapsed _drive!(int, prob)
-        else
-            missing
-        end
-
-        energy_drift = missing
-        accuracy     = missing
-        if res.converged
-            sol = res.sol
-            hasp = hasproperty(sol, :p)
-            t₀, q₀ = sol.t[0], sol.q[0]
-            t₁, q₁ = sol.t[res.last_good], sol.q[res.last_good]
-            p₀ = hasp ? sol.p[0] : nothing
-            p₁ = hasp ? sol.p[res.last_good] : nothing
-            H₀ = spec.energy(t₀, q₀, p₀, params)
-            H₁ = spec.energy(t₁, q₁, p₁, params)
-            energy_drift = Float64(abs(H₁ - H₀))
-            if spec.reference !== nothing
-                accuracy = Float64(maximum(abs, q₁ .- spec.reference(t₁, q₀, params)))
+            opts = merge(
+                _solver_options(T; max_iterations, f_abstol = spec.f_abstol_factor *
+                                                              eps(T)),
+                (; regularization_factor = reg.factor(T)))
+            int = if scfg.linesearch === nothing
+                GeometricIntegrator(prob, method; solver = scfg.solver, opts...)
+            else
+                GeometricIntegrator(prob, method; solver = scfg.solver,
+                    linesearch = scfg.linesearch(T), opts...)
             end
-        end
 
-        return (; base..., converged = res.converged,
+            res = _drive!(int, prob)
+
+            runtime = if timing === :benchmark
+                @belapsed _drive!($int, $prob) samples=100 seconds=2
+            elseif timing === :quick
+                @elapsed _drive!(int, prob)
+            else
+                missing
+            end
+
+            energy_drift = missing
+            accuracy = missing
+            if res.converged
+                sol = res.sol
+                hasp = hasproperty(sol, :p)
+                t₀, q₀ = sol.t[0], sol.q[0]
+                t₁, q₁ = sol.t[res.last_good], sol.q[res.last_good]
+                p₀ = hasp ? sol.p[0] : nothing
+                p₁ = hasp ? sol.p[res.last_good] : nothing
+                H₀ = spec.energy(t₀, q₀, p₀, params)
+                H₁ = spec.energy(t₁, q₁, p₁, params)
+                energy_drift = Float64(abs(H₁ - H₀))
+                if spec.reference !== nothing
+                    accuracy = Float64(maximum(abs, q₁ .- spec.reference(t₁, q₀, params)))
+                end
+            end
+
+            return (; base..., converged = res.converged,
                 iterations_total = res.total_iters,
-                iterations_mean  = res.nsteps == 0 ? missing : res.total_iters / res.nsteps,
+                iterations_mean = res.nsteps == 0 ? missing : res.total_iters / res.nsteps,
                 runtime_s = runtime === missing ? missing : Float64(runtime),
                 max_residual = res.max_residual, energy_drift, accuracy)
-    catch err
-        quiet || @warn "run_nonlinear_case failed" problem = spec.name precision = T solver = solver_label(scfg) regularization = reg.name exception = err
-        return missing_row
-    end
+        catch err
+            quiet ||
+                @warn "run_nonlinear_case failed" problem=spec.name precision=T solver=solver_label(scfg) regularization=reg.name exception=err
+            return missing_row
+        end
     end  # _maybe_quiet
 end
 
-run_nonlinear_case(spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ::Real, method;
-                   kwargs...) where {T} =
+function run_nonlinear_case(
+        spec::ProblemSpec, ::Type{T}, scfg::SolverConfig, λ::Real, method;
+        kwargs...) where {T}
     run_nonlinear_case(spec, T, scfg, RegularizationConfig(λ), method; kwargs...)
+end
 
 """
     run_nonlinear_benchmark(spec; method_builder = nonlinear_onelayer_method,
@@ -347,15 +356,14 @@ whole block is recorded as non-converged rows instead of aborting the sweep.
 the latter are wrapped as fixed-value configurations.
 """
 function run_nonlinear_benchmark(spec::ProblemSpec;
-                                 method_builder = nonlinear_onelayer_method,
-                                 precisions = default_precisions(),
-                                 solver_configs = nonlinear_solver_configs(),
-                                 regularization_factors = nonlinear_regularization_factors(),
-                                 timing::Symbol = :quick,
-                                 max_iterations::Integer = 1000,
-                                 verbose::Bool = true,
-                                 quiet::Bool = false)
-
+        method_builder = nonlinear_onelayer_method,
+        precisions = default_precisions(),
+        solver_configs = nonlinear_solver_configs(),
+        regularization_factors = nonlinear_regularization_factors(),
+        timing::Symbol = :quick,
+        max_iterations::Integer = 1000,
+        verbose::Bool = true,
+        quiet::Bool = false)
     regs = [r isa RegularizationConfig ? r : RegularizationConfig(r)
             for r in regularization_factors]
 
@@ -368,15 +376,20 @@ function run_nonlinear_benchmark(spec::ProblemSpec;
         method = try
             method_builder(T)
         catch err
-            quiet || @warn "building the integrator failed" problem = spec.name precision = T exception = err
+            quiet ||
+                @warn "building the integrator failed" problem=spec.name precision=T exception=err
             for scfg in solver_configs, reg in regs
+
                 push!(rows, _nonlinear_missing_row(spec, T, scfg, reg))
             end
             continue
         end
         for scfg in solver_configs, reg in regs
-            verbose && @info "benchmarking" problem = spec.name precision = T solver = solver_label(scfg) regularization = reg.name
-            push!(rows, run_nonlinear_case(spec, T, scfg, reg, method; timing, max_iterations, quiet))
+
+            verbose &&
+                @info "benchmarking" problem=spec.name precision=T solver=solver_label(scfg) regularization=reg.name
+            push!(rows, run_nonlinear_case(
+                spec, T, scfg, reg, method; timing, max_iterations, quiet))
         end
     end
     DataFrame(rows)

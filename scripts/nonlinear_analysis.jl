@@ -17,8 +17,8 @@ using PrettyTables
 import GeometricIntegratorsBase as GIB
 
 function run_nonlinear_analysis(spec::ProblemSpec;
-                                timing::Symbol = :benchmark,
-                                resultsdir = joinpath(@__DIR__, "..", "results"))
+        timing::Symbol = :benchmark,
+        resultsdir = joinpath(@__DIR__, "..", "results"))
     mkpath(resultsdir)
     # include the time step in the file names so runs at different Δt do not clash
     Δt = GIB.timestep(spec.builder(Float64))
@@ -38,18 +38,20 @@ function run_nonlinear_analysis(spec::ProblemSpec;
 
     # figures — panelled by regularization factor
     figures = [
-        "convergence" => plot_convergence(df;  panelcol = :regularization, title = spec.name),
-        "iterations"  => plot_iterations(df;   panelcol = :regularization, title = spec.name),
-        "runtime"     => plot_runtime(df;      panelcol = :regularization, title = spec.name),
-        "energy"      => plot_energy_drift(df; panelcol = :regularization, title = spec.name),
+        "convergence" =>
+            plot_convergence(df; panelcol = :regularization, title = spec.name),
+        "iterations" => plot_iterations(df; panelcol = :regularization, title = spec.name),
+        "runtime" => plot_runtime(df; panelcol = :regularization, title = spec.name),
+        "energy" => plot_energy_drift(df; panelcol = :regularization, title = spec.name)
     ]
     any(!ismissing, df.accuracy) &&
-        push!(figures, "accuracy" => plot_accuracy(df; panelcol = :regularization, title = spec.name))
+        push!(figures, "accuracy" =>
+            plot_accuracy(df; panelcol = :regularization, title = spec.name))
 
     for (name, fig) in figures
         save(joinpath(resultsdir, "$(stem)_$(name).png"), fig)
     end
 
-    @info "analysis complete" csv = csvpath figures = length(figures)
+    @info "analysis complete" csv=csvpath figures=length(figures)
     return df
 end

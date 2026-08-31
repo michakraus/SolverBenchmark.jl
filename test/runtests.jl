@@ -8,7 +8,6 @@ using Test
 # covered by the documentation and driver scripts).
 
 @testset "SolverBenchmark.jl" begin
-
     @testset "configurations" begin
         cfgs = default_solver_configs()
         @test length(cfgs) == 8
@@ -20,8 +19,8 @@ using Test
     end
 
     @testset "run_case — harmonic oscillator (Float64)" begin
-        spec  = harmonic_oscillator_spec(timespan = (0.0, 1.0))
-        scfg  = first(default_solver_configs())        # Newton/Static
+        spec = harmonic_oscillator_spec(timespan = (0.0, 1.0))
+        scfg = first(default_solver_configs())        # Newton/Static
         igcfg = first(default_initial_guesses())       # HermiteExtrapolation
 
         # :quick measures the run time
@@ -42,8 +41,8 @@ using Test
     end
 
     @testset "precision coverage (harmonic oscillator)" begin
-        spec    = harmonic_oscillator_spec(timespan = (0.0, 1.0))
-        scfg    = default_solver_configs()[2]          # Newton/Backtracking
+        spec = harmonic_oscillator_spec(timespan = (0.0, 1.0))
+        scfg = default_solver_configs()[2]          # Newton/Backtracking
         hermite = first(default_initial_guesses())
         for T in (BFloat16, Float16, Float32)
             row = run_case(spec, T, scfg, hermite; timing = :none, quiet = true)
@@ -59,11 +58,12 @@ using Test
     @testset "run_benchmark — full grid for one precision/guess" begin
         spec = harmonic_oscillator_spec(timespan = (0.0, 1.0))
         df = run_benchmark(spec; precisions = (Float64,),
-                           initial_guesses = default_initial_guesses()[1:1],
-                           timing = :none, verbose = false)
+            initial_guesses = default_initial_guesses()[1:1],
+            timing = :none, verbose = false)
         @test nrow(df) == 8                            # 8 solver configs
-        @test all(in(names(df)), ["converged", "iterations_mean", "runtime_s",
-                                  "energy_drift", "accuracy", "solver_label"])
+        @test all(in(names(df)),
+            ["converged", "iterations_mean", "runtime_s",
+                "energy_drift", "accuracy", "solver_label"])
         @test count(df.converged) ≥ 6                  # at least the well-behaved solvers
 
         st = summary_table(df)
@@ -83,9 +83,9 @@ using Test
         # target rather than below it — which is exactly what the flag is for.
         spec = double_pendulum_spec(timespan = (0.0, 1.0), timestep = 0.01)
         df = run_benchmark(spec; precisions = (Float64,),
-                           solver_configs = default_solver_configs()[1:2],
-                           initial_guesses = default_initial_guesses()[1:1],
-                           timing = :none, verbose = false, quiet = true)
+            solver_configs = default_solver_configs()[1:2],
+            initial_guesses = default_initial_guesses()[1:1],
+            timing = :none, verbose = false, quiet = true)
         @test "f_abstol" in names(df)
         @test all(df.f_abstol .== 256 * eps(Float64))
 
@@ -101,33 +101,33 @@ using Test
     end
 
     @testset "run_case — pendulum has no analytic reference" begin
-        spec  = pendulum_spec(timespan = (0.0, 1.0))
-        row   = run_case(spec, Float64, first(default_solver_configs()),
-                         first(default_initial_guesses()); timing = :none)
+        spec = pendulum_spec(timespan = (0.0, 1.0))
+        row = run_case(spec, Float64, first(default_solver_configs()),
+            first(default_initial_guesses()); timing = :none)
         @test row.problem == "Pendulum"
         @test row.converged
         @test row.accuracy === missing
     end
 
     @testset "coarse time step (Δt = 1.0)" begin
-        robust  = default_solver_configs()[2]         # Newton/Backtracking
+        robust = default_solver_configs()[2]         # Newton/Backtracking
         hermite = first(default_initial_guesses())    # HermiteExtrapolation
 
-        @testset "$name at Δt = 1.0" for (name, mk) in
-                (("HarmonicOscillator", harmonic_oscillator_spec),
-                 ("Pendulum", pendulum_spec))
+        @testset "$name at Δt = 1.0" for (name, mk) in ((
+            "HarmonicOscillator", harmonic_oscillator_spec),
+            ("Pendulum", pendulum_spec))
             spec = mk(timespan = (0.0, 20.0), timestep = 1.0)
-            row  = run_case(spec, Float64, robust, hermite; timing = :none, quiet = true)
+            row = run_case(spec, Float64, robust, hermite; timing = :none, quiet = true)
             @test row.problem == name
             @test row.converged
             @test row.iterations_mean ≥ 1
         end
 
         @testset "pendulum needs more Newton iterations at Δt = 1.0 than at Δt = 0.1" begin
-            fine   = run_case(pendulum_spec(timespan = (0.0, 20.0), timestep = 0.1),
-                              Float64, robust, hermite; timing = :none, quiet = true)
+            fine = run_case(pendulum_spec(timespan = (0.0, 20.0), timestep = 0.1),
+                Float64, robust, hermite; timing = :none, quiet = true)
             coarse = run_case(pendulum_spec(timespan = (0.0, 20.0), timestep = 1.0),
-                              Float64, robust, hermite; timing = :none, quiet = true)
+                Float64, robust, hermite; timing = :none, quiet = true)
             @test fine.converged && coarse.converged
             @test coarse.iterations_mean > fine.iterations_mean
         end
@@ -136,7 +136,7 @@ using Test
             for mk in (harmonic_oscillator_spec, pendulum_spec)
                 spec = mk(timespan = (0.0, 10.0), timestep = 1.0)
                 df = run_benchmark(spec; precisions = (Float64,),
-                                   timing = :none, verbose = false, quiet = true)
+                    timing = :none, verbose = false, quiet = true)
                 @test nrow(df) == 24                  # 8 solver configs × 3 initial guesses
                 @test count(df.converged) ≥ 6
             end
@@ -144,14 +144,15 @@ using Test
     end
 
     @testset "Lotka–Volterra (iodeproblem)" begin
-        robust  = default_solver_configs()[2]         # Newton/Backtracking
+        robust = default_solver_configs()[2]         # Newton/Backtracking
         hermite = first(default_initial_guesses())
 
         # both the native step (Δt = 0.01) and the coarser Δt = 0.1
-        @testset "$name at Δt = $dt" for (name, mk) in
-                (("LotkaVolterra2d", lotka_volterra_2d_spec),
-                 ("LotkaVolterra4d", lotka_volterra_4d_spec)),
-                dt in (0.01, 0.1)
+        @testset "$name at Δt = $dt" for (name, mk) in ((
+                "LotkaVolterra2d", lotka_volterra_2d_spec),
+                ("LotkaVolterra4d", lotka_volterra_4d_spec)),
+            dt in (0.01, 0.1)
+
             spec = mk(timespan = (0.0, 2.0), timestep = dt)
 
             # a robust solver converges at Float64
@@ -163,24 +164,25 @@ using Test
 
             # the grid runs through the IODE path for one precision/guess
             df = run_benchmark(spec; precisions = (Float64,),
-                               initial_guesses = default_initial_guesses()[1:1],
-                               timing = :none, verbose = false, quiet = true)
+                initial_guesses = default_initial_guesses()[1:1],
+                timing = :none, verbose = false, quiet = true)
             @test nrow(df) == 8
             @test count(df.converged) ≥ 4
         end
     end
 
     @testset "Hamiltonian systems (hodeproblem)" begin
-        robust  = default_solver_configs()[2]         # Newton/Backtracking
+        robust = default_solver_configs()[2]         # Newton/Backtracking
         hermite = first(default_initial_guesses())
 
         # double pendulum at its standard Δt = 0.01 and the coarse Δt = 0.1;
         # Toda lattice (N = 16) at its standard Δt = 0.1 and the coarse Δt = 1.0.
         # Short time spans keep the 16-dimensional implicit solves fast.
-        @testset "$name at Δt = $dt" for (name, mk, tspan, dts) in
-                (("DoublePendulum", double_pendulum_spec, (0.0, 1.0), (0.01, 0.1)),
-                 ("TodaLattice",    toda_lattice_spec,    (0.0, 1.0), (0.1, 1.0))),
-                dt in dts
+        @testset "$name at Δt = $dt" for (name, mk, tspan, dts) in ((
+                "DoublePendulum", double_pendulum_spec, (0.0, 1.0), (0.01, 0.1)),
+                ("TodaLattice", toda_lattice_spec, (0.0, 1.0), (0.1, 1.0))),
+            dt in dts
+
             spec = mk(timespan = tspan, timestep = dt)
 
             # a robust solver converges at Float64, and the p-aware energy proxy
@@ -194,8 +196,8 @@ using Test
 
             # the grid runs through the HODE path for one precision/guess
             df = run_benchmark(spec; precisions = (Float64,),
-                               initial_guesses = default_initial_guesses()[1:1],
-                               timing = :none, verbose = false, quiet = true)
+                initial_guesses = default_initial_guesses()[1:1],
+                timing = :none, verbose = false, quiet = true)
             @test nrow(df) == 8
             @test count(df.converged) ≥ 4
         end
@@ -214,7 +216,7 @@ using Test
         @testset "double pendulum converges at Float32 (relaxed f_abstol)" begin
             @test double_pendulum_spec().f_abstol_factor == 256
             spec = double_pendulum_spec(timespan = (0.0, 1.0), timestep = 0.01)
-            row  = run_case(spec, Float32, robust, hermite; timing = :none, quiet = true)
+            row = run_case(spec, Float32, robust, hermite; timing = :none, quiet = true)
             @test row.converged
         end
     end
@@ -224,7 +226,7 @@ using Test
             cfgs = nonlinear_solver_configs()
             @test length(cfgs) == 4
             @test solver_label.(cfgs) == ["Newton/Static", "Newton/Backtracking",
-                                          "Newton/StrongWolfe", "DogLeg"]
+                "Newton/StrongWolfe", "DogLeg"]
             @test count(c -> c.linesearch === nothing, cfgs) == 1        # DogLeg
 
             regs = nonlinear_regularization_factors()
@@ -242,8 +244,9 @@ using Test
         @testset "regularization ladder scales with the precision" begin
             rungs = nonlinear_regularization_factors()[2:end]
             expected = Dict(BFloat16 => (1, 2, 3, 4, 5, 6), Float16 => (1, 2, 3, 4, 5, 6),
-                            Float32  => (1, 2, 3, 4, 5, 6), Float64 => (2, 4, 6, 8, 10, 12))
+                Float32 => (1, 2, 3, 4, 5, 6), Float64 => (2, 4, 6, 8, 10, 12))
             for (T, ks) in expected, (i, k) in enumerate(ks)
+
                 @test regularization_exponent(T, i) == k
                 λ = rungs[i].factor(T)
                 @test λ isa T                       # no silent upcast to Float64
@@ -266,15 +269,17 @@ using Test
         end
 
         # short (10-step) LODE spec; a small dictionary keeps the network solves fast
-        spec    = harmonic_oscillator_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)
-        newton  = nonlinear_solver_configs()[2]                          # Newton/Backtracking
-        method  = nonlinear_onelayer_method(Float64; dict_amount = 100)
+        spec = harmonic_oscillator_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)
+        newton = nonlinear_solver_configs()[2]                          # Newton/Backtracking
+        method = nonlinear_onelayer_method(Float64; dict_amount = 100)
 
         @testset "regularization is required for convergence (Float64)" begin
             # a nonzero regularization factor is essential: the network Newton
             # system is near-singular, so λ = 0 stalls while λ > 0 converges
-            reg0 = run_nonlinear_case(spec, Float64, newton, 0.0, method; timing = :none, quiet = true)
-            regλ = run_nonlinear_case(spec, Float64, newton, 1e-5, method; timing = :none, quiet = true)
+            reg0 = run_nonlinear_case(
+                spec, Float64, newton, 0.0, method; timing = :none, quiet = true)
+            regλ = run_nonlinear_case(
+                spec, Float64, newton, 1e-5, method; timing = :none, quiet = true)
             @test reg0.problem == "HarmonicOscillatorLODE"
             @test !reg0.converged
             @test regλ.converged
@@ -284,8 +289,8 @@ using Test
             # the same through the ladder: rung 2 is 16√eps(Float64), the value
             # NonlinearIntegrators recommends
             rung2 = run_nonlinear_case(spec, Float64, newton,
-                                       nonlinear_regularization_factors()[3], method;
-                                       timing = :none, quiet = true)
+                nonlinear_regularization_factors()[3], method;
+                timing = :none, quiet = true)
             @test rung2.regularization == "λ rung 2"
             @test rung2.regularization_exponent == 4
             @test rung2.regularization_factor ≈ 16 * sqrt(eps(Float64))
@@ -303,16 +308,19 @@ using Test
                 timing = :none, verbose = false, quiet = true)
 
             @test nrow(df) == 16                                         # 4 × 2 × 2
-            @test all(in(names(df)), ["converged", "iterations_mean", "runtime_s",
-                                      "energy_drift", "accuracy", "solver_label",
-                                      "regularization", "regularization_exponent",
-                                      "regularization_factor"])
+            @test all(in(names(df)),
+                ["converged", "iterations_mean", "runtime_s",
+                    "energy_drift", "accuracy", "solver_label",
+                    "regularization", "regularization_exponent",
+                    "regularization_factor"])
             # the panel label is shared across precisions, but the shift behind it is
             # not: the same rung is a different multiple of √eps at Float64
             rung2 = df[df.regularization .== "λ rung 2", :]
             @test all(ismissing, df[df.regularization .== "λ = 0", :].regularization_exponent)
-            @test only(unique(rung2[rung2.precision .== "Float64", :].regularization_exponent)) == 4
-            @test only(unique(rung2[rung2.precision .== "Float32", :].regularization_exponent)) == 2
+            @test only(unique(rung2[rung2.precision .== "Float64", :].regularization_exponent)) ==
+                  4
+            @test only(unique(rung2[rung2.precision .== "Float32", :].regularization_exponent)) ==
+                  2
 
             # Float64 with regularization converges; both 16-bit formats fail
             # gracefully. Their failure is *not* the regularized Newton solve — it is
@@ -354,15 +362,16 @@ using Test
         # degenerate Lagrangian is unsupported). The pendulum uses its 2d
         # phase-space iodeproblem; the others use lodeproblems (D = 2 and D = 16).
         # The same (problem-agnostic) network `method` is reused for all of them.
-        @testset "$name converges with regularization (Float64)" for (name, mk) in
-                (("PendulumLODE",       pendulum_lode_spec),
-                 ("DoublePendulumLODE", double_pendulum_lode_spec),
-                 ("TodaLatticeLODE",    toda_lattice_lode_spec))
-            s   = mk(timespan = (0.0, 1.0), timestep = 0.1)
+        @testset "$name converges with regularization (Float64)" for (name, mk) in ((
+            "PendulumLODE", pendulum_lode_spec),
+            ("DoublePendulumLODE", double_pendulum_lode_spec),
+            ("TodaLatticeLODE", toda_lattice_lode_spec))
+            s = mk(timespan = (0.0, 1.0), timestep = 0.1)
             # rung 2 = 16√eps(Float64); measured, every rung converges here and
             # λ = 0 converges on none of the three
             reg = nonlinear_regularization_factors()[3]
-            row = run_nonlinear_case(s, Float64, newton, reg, method; timing = :none, quiet = true)
+            row = run_nonlinear_case(
+                s, Float64, newton, reg, method; timing = :none, quiet = true)
             @test row.problem == name
             @test row.converged
             @test row.iterations_mean ≥ 1
@@ -377,7 +386,7 @@ using Test
     @testset "cached_sweep" begin
         spec = harmonic_oscillator_spec(timespan = (0.0, 1.0), timestep = 0.1)
         sweep() = run_benchmark(spec; precisions = (Float64,), timing = :none,
-                                verbose = false, quiet = true)
+            verbose = false, quiet = true)
 
         @testset "no cache configured is a plain call" begin
             withenv("SOLVERBENCHMARK_SWEEP_CACHE" => nothing) do
@@ -428,7 +437,7 @@ using Test
         @testset "selection computes only the named sweeps" begin
             mktempdir() do dir
                 withenv("SOLVERBENCHMARK_SWEEP_CACHE" => dir,
-                        "SOLVERBENCHMARK_SWEEPS" => "wanted,also_wanted") do
+                    "SOLVERBENCHMARK_SWEEPS" => "wanted,also_wanted") do
                     @test selected_sweeps() == Set(["wanted", "also_wanted"])
 
                     @test nrow(cached_sweep(() -> DataFrame(a = [1]), "wanted")) == 1
@@ -451,7 +460,7 @@ using Test
         @testset "no selection computes anything asked for" begin
             mktempdir() do dir
                 withenv("SOLVERBENCHMARK_SWEEP_CACHE" => dir,
-                        "SOLVERBENCHMARK_SWEEPS" => nothing) do
+                    "SOLVERBENCHMARK_SWEEPS" => nothing) do
                     @test selected_sweeps() === nothing
                     @test nrow(cached_sweep(() -> DataFrame(a = [1, 2]), "anything")) == 2
                 end

@@ -18,7 +18,7 @@ struct SolverConfig
     solver_name::String
     linesearch_name::String
     solver::Any
-    linesearch::Union{Function,Nothing}
+    linesearch::Union{Function, Nothing}
 end
 
 """
@@ -27,8 +27,10 @@ end
 A compact label combining solver and line-search name, e.g. `"Newton/Backtracking"`
 or `"DogLeg"`.
 """
-solver_label(cfg::SolverConfig) =
-    isempty(cfg.linesearch_name) ? cfg.solver_name : "$(cfg.solver_name)/$(cfg.linesearch_name)"
+function solver_label(cfg::SolverConfig)
+    isempty(cfg.linesearch_name) ? cfg.solver_name :
+    "$(cfg.solver_name)/$(cfg.linesearch_name)"
+end
 
 """
     precision_label(T)
@@ -55,12 +57,12 @@ line search) — eight configurations in total.
 """
 function default_solver_configs()
     linesearches = [
-        ("Static",             Static),
-        ("Backtracking",       Backtracking),
-        ("Bisection",          Bisection),
-        ("Quadratic",          Quadratic),
+        ("Static", Static),
+        ("Backtracking", Backtracking),
+        ("Bisection", Bisection),
+        ("Quadratic", Quadratic),
         ("BierlaireQuadratic", BierlaireQuadratic),
-        ("StrongWolfe",        StrongWolfe),
+        ("StrongWolfe", StrongWolfe)
     ]
 
     configs = SolverConfig[]
@@ -108,7 +110,7 @@ noise to a `Float16` one, whose own `√eps` is already `0.03`. See
 """
 struct RegularizationConfig
     name::String
-    rung::Union{Int,Nothing}
+    rung::Union{Int, Nothing}
     factor::Function
 end
 
@@ -120,8 +122,9 @@ The rungs of the precision-scaled ladder are labelled by position instead — th
 numeric value depends on the precision, and a benchmark `DataFrame` holds all four
 at once (see [`scaled_regularization`](@ref)).
 """
-regularization_label(λ) =
+function regularization_label(λ)
     λ == 0 ? "λ = 0" : "λ = " * replace((@sprintf "%.0e" λ), "e-0" => "e-", "e+0" => "e")
+end
 
 """
     RegularizationConfig(λ::Real)
@@ -130,8 +133,9 @@ A configuration holding the *same* factor `λ` at every precision, labelled by i
 value. This is how the `λ = 0` control of the nonlinear sweep is built, and the
 convenient form for a one-off investigation at a hand-picked value.
 """
-RegularizationConfig(λ::Real) =
+function RegularizationConfig(λ::Real)
     RegularizationConfig(regularization_label(λ), nothing, T -> T(λ))
+end
 
 # The two regularization ladders, as exponents `k` of `2^k √eps(T)`. `Float64` needs
 # its own because `√eps` spans four orders of magnitude across the benchmarked formats
@@ -158,8 +162,9 @@ regularization_exponent(::Type{T}, rung::Integer) where {T} = _REG_EXPONENTS_LOW
 # and `run_nonlinear_case` records every exception as a non-converged row, so that
 # would turn a rung into a silent non-run. Taking `eps` to `Float64` first also keeps
 # `sqrt` off the `BFloat16` path.
-_regularization_factor(::Type{T}, rung::Integer) where {T} =
+function _regularization_factor(::Type{T}, rung::Integer) where {T}
     T(2.0^regularization_exponent(T, rung) * sqrt(Float64(eps(T))))
+end
 
 """
     scaled_regularization(rung)
@@ -182,11 +187,13 @@ Return the default list of [`InitialGuessConfig`](@ref)s:
 `HermiteExtrapolation` (the integrator default), `MidpointExtrapolation`, and
 `NoInitialGuess` (which reuses the solution of the previous time step).
 """
-default_initial_guesses() = [
-    InitialGuessConfig("HermiteExtrapolation",  () -> HermiteExtrapolation()),
-    InitialGuessConfig("MidpointExtrapolation", () -> MidpointExtrapolation()),
-    InitialGuessConfig("NoInitialGuess",        () -> NoInitialGuess()),
-]
+function default_initial_guesses()
+    [
+        InitialGuessConfig("HermiteExtrapolation", () -> HermiteExtrapolation()),
+        InitialGuessConfig("MidpointExtrapolation", () -> MidpointExtrapolation()),
+        InitialGuessConfig("NoInitialGuess", () -> NoInitialGuess())
+    ]
+end
 
 """
     default_precisions()

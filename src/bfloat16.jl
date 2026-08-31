@@ -41,7 +41,9 @@ Base.sincos(x::BFloat16) = BFloat16.(sincos(Float32(x)))
 # via `Float32` is correctly rounded: 24 significand bits is more than the 16 an exact
 # `BFloat16` product needs.
 Base.atan(y::BFloat16, x::BFloat16) = BFloat16(atan(Float32(y), Float32(x)))
-Base.fma(x::BFloat16, y::BFloat16, z::BFloat16) = BFloat16(fma(Float32(x), Float32(y), Float32(z)))
+function Base.fma(x::BFloat16, y::BFloat16, z::BFloat16)
+    BFloat16(fma(Float32(x), Float32(y), Float32(z)))
+end
 Base.mod2pi(x::BFloat16) = BFloat16(mod2pi(Float32(x)))
 
 # --- NaNMath ------------------------------------------------------------------
@@ -53,9 +55,9 @@ Base.mod2pi(x::BFloat16) = BFloat16(mod2pi(Float32(x)))
 # solver. These mirror NaNMath's own definitions with `T = BFloat16`; the guard, not
 # the kernel, is the point of each one.
 for (f, guard) in ((:sin, :(isinf(x))), (:cos, :(isinf(x))), (:tan, :(isinf(x))),
-                   (:asin, :(abs(x) > one(x))), (:acos, :(abs(x) > one(x))),
-                   (:atanh, :(abs(x) > one(x))), (:acosh, :(x < one(x))),
-                   (:log, :(x < 0)), (:log2, :(x < 0)), (:log10, :(x < 0)),
-                   (:log1p, :(x < -one(x))))
+    (:asin, :(abs(x) > one(x))), (:acos, :(abs(x) > one(x))),
+    (:atanh, :(abs(x) > one(x))), (:acosh, :(x < one(x))),
+    (:log, :(x < 0)), (:log2, :(x < 0)), (:log10, :(x < 0)),
+    (:log1p, :(x < -one(x))))
     @eval NaNMath.$f(x::BFloat16) = $guard ? BFloat16(NaN) : BFloat16(Base.$f(Float32(x)))
 end

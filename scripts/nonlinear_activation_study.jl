@@ -32,28 +32,32 @@ using NonlinearIntegrators: OGA1d, OGA1d_Legacy
 # the seed change (activation held fixed), relu3_OGA1dLeg reproduces the current
 # production benchmark.
 const ACTIVATION_MATRIX = [
-    ("relu3_OGA1d",    relu_k(3), OGA1d()),
+    ("relu3_OGA1d", relu_k(3), OGA1d()),
     ("relu3_OGA1dLeg", relu_k(3), OGA1d_Legacy()),
-    ("elu_OGA1d",      elu,       OGA1d()),
-    ("gelu_OGA1d",     gelu,      OGA1d()),
+    ("elu_OGA1d", elu, OGA1d()),
+    ("gelu_OGA1d", gelu, OGA1d())
 ]
 
 # Fast, decisive slice: HO has an analytic reference (accuracy populated — the
 # clearest Float16 signal); the double pendulum is where OGA1d regresses hardest.
-activation_study_specs() = [
-    harmonic_oscillator_lode_spec(; timestep = 0.1, timespan = (0.0, 1.0)),
-    double_pendulum_lode_spec(;    timestep = 0.1, timespan = (0.0, 1.0)),
-]
+function activation_study_specs()
+    [
+        harmonic_oscillator_lode_spec(; timestep = 0.1, timespan = (0.0, 1.0)),
+        double_pendulum_lode_spec(; timestep = 0.1, timespan = (0.0, 1.0))
+    ]
+end
 
-method_builder(activation, seed) =
+function method_builder(activation, seed)
     T -> nonlinear_onelayer_method(T; activation = activation, initial_guess_method = seed)
+end
 
 # Rank key for picking the representative row within a (problem, activation,
 # precision) group: converged first, then smallest residual, then fewest
 # iterations. `missing` sorts last.
 _rank_num(x) = ismissing(x) ? Inf : Float64(x)
 
-const _PRECISION_RANK = Dict("BFloat16" => 1, "Float16" => 2, "Float32" => 3, "Float64" => 4)
+const _PRECISION_RANK = Dict("BFloat16" => 1, "Float16" => 2, "Float32" => 3, "Float64" =>
+    4)
 
 """
     best_rows(df)
@@ -66,9 +70,10 @@ function best_rows(df::DataFrame)
     parts = DataFrame[]
     for g in groupby(df, [:problem, :activation, :precision])
         gg = DataFrame(g)
-        sort!(gg, [DataFrames.order(:converged, rev = true),
-                   DataFrames.order(:max_residual,    by = _rank_num),
-                   DataFrames.order(:iterations_mean, by = _rank_num)])
+        sort!(gg,
+            [DataFrames.order(:converged, rev = true),
+                DataFrames.order(:max_residual, by = _rank_num),
+                DataFrames.order(:iterations_mean, by = _rank_num)])
         row = gg[1:1, :]
         # keep how many of the (solver × λ) configs converged in this cell, so a
         # single best row still shows breadth of convergence (e.g. 24/28 vs 0/28)
@@ -77,19 +82,20 @@ function best_rows(df::DataFrame)
         push!(parts, row)
     end
     best = vcat(parts...)
-    best = select(best, [:problem, :activation, :precision, :converged,
-                         :n_converged, :n_total, :max_residual, :iterations_mean, :accuracy])
+    best = select(best,
+        [:problem, :activation, :precision, :converged,
+            :n_converged, :n_total, :max_residual, :iterations_mean, :accuracy])
     sort!(best, [:problem, :activation,
-                 DataFrames.order(:precision, by = p -> get(_PRECISION_RANK, p, 99))])
+        DataFrames.order(:precision, by = p -> get(_PRECISION_RANK, p, 99))])
     best
 end
 
 function run_activation_study(; resultsdir = joinpath(@__DIR__, "..", "results"),
-                              specs = activation_study_specs(),
-                              matrix = ACTIVATION_MATRIX,
-                              precisions = default_precisions(),
-                              solver_configs = nonlinear_solver_configs(),
-                              regularization_factors = nonlinear_regularization_factors())
+        specs = activation_study_specs(),
+        matrix = ACTIVATION_MATRIX,
+        precisions = default_precisions(),
+        solver_configs = nonlinear_solver_configs(),
+        regularization_factors = nonlinear_regularization_factors())
     mkpath(resultsdir)
     rows = DataFrame[]
 
@@ -99,7 +105,7 @@ function run_activation_study(; resultsdir = joinpath(@__DIR__, "..", "results")
         # run_nonlinear_case's own try/catch), so a tracing failure — most likely
         # ELU on the symbolic path — is contained to that one cell instead of
         # aborting the whole study.
-        @info "activation study" problem = spec.name activation = label precision = T
+        @info "activation study" problem=spec.name activation=label precision=T
         try
             df = run_nonlinear_benchmark(spec;
                 method_builder = method_builder(activation, seed),
@@ -108,7 +114,7 @@ function run_activation_study(; resultsdir = joinpath(@__DIR__, "..", "results")
             df.activation = fill(label, nrow(df))
             push!(rows, df)
         catch err
-            @warn "activation cell failed" problem = spec.name activation = label precision = T exception = err
+            @warn "activation cell failed" problem=spec.name activation=label precision=T exception=err
         end
     end
 
@@ -127,7 +133,7 @@ function run_activation_study(; resultsdir = joinpath(@__DIR__, "..", "results")
         println(io, markdown_table(best))
     end
 
-    @info "activation study complete" csv = csvpath markdown = mdpath rows = nrow(combined)
+    @info "activation study complete" csv=csvpath markdown=mdpath rows=nrow(combined)
     return combined, best
 end
 

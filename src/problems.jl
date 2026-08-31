@@ -27,12 +27,13 @@ struct ProblemSpec
     name::String
     builder::Function
     energy::Function
-    reference::Union{Function,Nothing}
+    reference::Union{Function, Nothing}
     f_abstol_factor::Float64
 end
 
-ProblemSpec(name, builder, energy, reference = nothing; f_abstol_factor::Real = 8) =
+function ProblemSpec(name, builder, energy, reference = nothing; f_abstol_factor::Real = 8)
     ProblemSpec(name, builder, energy, reference, Float64(f_abstol_factor))
+end
 
 """
     harmonic_oscillator_spec(; x₀ = [0.5, 0.0], timespan = (0.0, 100.0), timestep = 0.1)
@@ -156,7 +157,7 @@ the energy itself, so a `BFloat16` row here reports convergence against a target
 too loose to be informative. [`summary_table`](@ref) flags such rows.
 """
 function double_pendulum_spec(; q₀ = DoublePendulum.θ₀, p₀ = DoublePendulum.p₀,
-                                timespan = (0.0, 10.0), timestep = 0.01)
+        timespan = (0.0, 10.0), timestep = 0.01)
     builder = T -> DoublePendulum.hodeproblem(T.(q₀), T.(p₀);
         timespan = (T(timespan[1]), T(timespan[2])), timestep = T(timestep),
         parameters = DoublePendulum.default_parameters(T))

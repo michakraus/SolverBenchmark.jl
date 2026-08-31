@@ -20,8 +20,10 @@ const RESULTS = joinpath(@__DIR__, "..", "results")
 mkpath(RESULTS)
 
 # A copy of `spec` with a different residual tolerance factor.
-retune(spec::ProblemSpec, factor) =
-    ProblemSpec(spec.name, spec.builder, spec.energy, spec.reference; f_abstol_factor = factor)
+function retune(spec::ProblemSpec, factor)
+    ProblemSpec(
+        spec.name, spec.builder, spec.energy, spec.reference; f_abstol_factor = factor)
+end
 
 const FACTORS = (8, 256)
 
@@ -32,11 +34,12 @@ function summarise(label, df, factor)
     for p in ["BFloat16", "Float16", "Float32", "Float64"]
         sub = df[df.precision .== p, :]
         isempty(sub) && continue
-        ok  = sub[sub.converged, :]
+        ok = sub[sub.converged, :]
         res = collect(skipmissing(ok.max_residual))
-        push!(rows, (case = label, factor = factor, precision = p,
-                     converged = "$(nrow(ok))/$(nrow(sub))",
-                     residual = _range(res)))
+        push!(rows,
+            (case = label, factor = factor, precision = p,
+                converged = "$(nrow(ok))/$(nrow(sub))",
+                residual = _range(res)))
     end
     rows
 end
@@ -48,24 +51,31 @@ rows = []
 # shows how far it got, and any warning the runtime writes (which is *not*
 # buffered) can be attributed to the sweep it came from.
 function sweep(label, factor, run)
-    println("### $label  f_abstol_factor = $factor"); flush(stdout); flush(stderr)
+    println("### $label  f_abstol_factor = $factor")
+    flush(stdout)
+    flush(stderr)
     df = run()
-    println("    converged $(count(df.converged))/$(nrow(df))"); flush(stdout); flush(stderr)
+    println("    converged $(count(df.converged))/$(nrow(df))")
+    flush(stdout)
+    flush(stderr)
     df
 end
 
 # --- implicit midpoint -------------------------------------------------------
 
 const MIDPOINT_CASES = [
-    ("DoublePendulum Δt=0.01", double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.01)),
-    ("DoublePendulum Δt=0.1",  double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.1)),
-    ("TodaLattice Δt=0.1",     toda_lattice_spec(timespan = (0.0, 100.0), timestep = 0.1)),
-    ("TodaLattice Δt=1.0",     toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0)),
+    ("DoublePendulum Δt=0.01",
+        double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.01)),
+    ("DoublePendulum Δt=0.1", double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.1)),
+    ("TodaLattice Δt=0.1", toda_lattice_spec(timespan = (0.0, 100.0), timestep = 0.1)),
+    ("TodaLattice Δt=1.0", toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0))
 ]
 
 for (label, spec) in MIDPOINT_CASES, factor in FACTORS
-    df = sweep(label, factor, () ->
-        run_benchmark(retune(spec, factor); timing = :none, verbose = false, quiet = true))
+
+    df = sweep(label,
+        factor,
+        () -> run_benchmark(retune(spec, factor); timing = :none, verbose = false, quiet = true))
     append!(rows, summarise(label, df, factor))
 end
 
@@ -75,15 +85,20 @@ end
 # they cannot discriminate between them.
 
 const NONLINEAR_CASES = [
-    ("HarmonicOscillatorLODE Δt=0.1", harmonic_oscillator_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
-    ("PendulumLODE Δt=0.1",           pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
-    ("DoublePendulumLODE Δt=0.1",     double_pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
-    ("TodaLatticeLODE Δt=0.1",        toda_lattice_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
+    ("HarmonicOscillatorLODE Δt=0.1",
+        harmonic_oscillator_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
+    ("PendulumLODE Δt=0.1", pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
+    ("DoublePendulumLODE Δt=0.1",
+        double_pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
+    ("TodaLatticeLODE Δt=0.1",
+        toda_lattice_lode_spec(timespan = (0.0, 1.0), timestep = 0.1))
 ]
 
 for (label, spec) in NONLINEAR_CASES, factor in FACTORS
-    df = sweep(label, factor, () ->
-        run_nonlinear_benchmark(retune(spec, factor); timing = :none, verbose = false, quiet = true))
+
+    df = sweep(label,
+        factor,
+        () -> run_nonlinear_benchmark(retune(spec, factor); timing = :none, verbose = false, quiet = true))
     append!(rows, summarise(label, df, factor))
 end
 

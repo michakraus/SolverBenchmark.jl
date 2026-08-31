@@ -27,7 +27,7 @@ const ANALYSES = [
     double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.1),
     # Toda lattice with N = 16 (hodeproblem), at the standard and the coarse time step
     toda_lattice_spec(timespan = (0.0, 100.0), timestep = 0.1),
-    toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0),
+    toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0)
 ]
 
 # --- Nonlinear integrator (NonLinear_OneLayer_GML) ---------------------------
@@ -39,12 +39,10 @@ const ANALYSES = [
 
 const NONLINEAR_STEPS = ((0.1, (0.0, 1.0)), (1.0, (0.0, 10.0)), (10.0, (0.0, 100.0)))
 
-const NONLINEAR_ANALYSES = [
-    spec_builder(; timestep, timespan)
-    for spec_builder in (harmonic_oscillator_lode_spec, pendulum_lode_spec,
-                         double_pendulum_lode_spec, toda_lattice_lode_spec)
-    for (timestep, timespan) in NONLINEAR_STEPS
-]
+const NONLINEAR_ANALYSES = [spec_builder(; timestep, timespan)
+                            for spec_builder in (harmonic_oscillator_lode_spec, pendulum_lode_spec,
+    double_pendulum_lode_spec, toda_lattice_lode_spec)
+                            for (timestep, timespan) in NONLINEAR_STEPS]
 
 # --- Run everything ----------------------------------------------------------
 

@@ -55,7 +55,8 @@ export cached_sweep, sweep_cache_dir, selected_sweeps, SweepNotSelected
 
 # post-processing
 export summary_table, markdown_table
-export comparison_figure, plot_convergence, plot_iterations, plot_runtime, plot_energy_drift, plot_accuracy
+export comparison_figure, plot_convergence, plot_iterations, plot_runtime,
+       plot_energy_drift, plot_accuracy
 
 include("bfloat16.jl")
 include("problems.jl")
