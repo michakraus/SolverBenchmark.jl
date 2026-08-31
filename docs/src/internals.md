@@ -18,7 +18,7 @@ integrators*, on example problems from
 [GeometricProblems.jl](https://github.com/JuliaGNI/GeometricProblems.jl). Every run
 records convergence, iterations per step, run time, residual, energy drift and,
 where an analytic solution exists, accuracy. There are two experiment sets — implicit
-midpoint, and `NonLinear_OneLayer_GML` from
+midpoint, and `ShallowNet` from
 [NonlinearIntegrators.jl](https://github.com/JuliaGNI/NonlinearIntegrators.jl); the
 [Home](@ref SolverBenchmark) page gives the grid each one sweeps.
 
@@ -116,8 +116,8 @@ sources that no solver option reaches:
 
 1. `GeometricIntegratorsBase`'s `HermiteExtrapolation` "history identical" warning —
    its `nowarn` keyword is not threaded through `GeometricIntegrator`.
-2. The inner `integrate(tem_ode, ImplicitMidpoint())` that `NonLinear_OneLayer_GML`
-   runs once per step to seed its `IntegratorExtrapolation`. It is called with no
+2. The inner `integrate(tem_ode, ImplicitMidpoint())` that `ShallowNet` runs once
+   per step to seed its `IntegratorExtrapolation`. It is called with no
    options, so it uses SimpleSolvers' defaults (`verbosity = 1`,
    `warn_iterations = 1000`, `Backtracking`) no matter how the outer solver is
    configured.

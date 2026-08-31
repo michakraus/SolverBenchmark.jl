@@ -221,7 +221,7 @@ using Test
         end
     end
 
-    @testset "NonlinearIntegrators (NonLinear_OneLayer_GML)" begin
+    @testset "NonlinearIntegrators (ShallowNet)" begin
         @testset "configuration" begin
             cfgs = nonlinear_solver_configs()
             @test length(cfgs) == 4

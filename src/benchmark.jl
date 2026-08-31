@@ -24,7 +24,7 @@ end
 #     coincide (a step whose solve does not move `q`). Emitted by
 #     GeometricIntegratorsBase, whose `nowarn` keyword is not threaded through
 #     `GeometricIntegrator`.
-#  2. `NonLinear_OneLayer_GML` seeds each step with its own inner integrator —
+#  2. `ShallowNet` seeds each step with its own inner integrator —
 #     `integrate(tem_ode, ImplicitMidpoint())`, called with *no* options, so that
 #     solve runs at the SimpleSolvers defaults (`verbosity = 1`,
 #     `warn_iterations = 1000`) behind a `Backtracking` line search regardless of

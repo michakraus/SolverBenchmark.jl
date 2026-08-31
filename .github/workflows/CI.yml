@@ -25,9 +25,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          # 1.11 is the minimum: the unregistered NonlinearIntegrators dependency
-          # is resolved through a Project.toml `[sources]` entry, which requires
-          # Julia 1.11+.
+          # 1.11 is the minimum, because NonlinearIntegrators 0.4 declares
+          # `julia = "1.11"`. It is no longer the `[sources]` entry that sets the
+          # floor — NonlinearIntegrators is now registered in General.
           - '1.11'
           - '1'
           - 'nightly'

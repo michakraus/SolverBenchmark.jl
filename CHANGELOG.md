@@ -39,6 +39,48 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **Every dependency moves to its latest registered version, and five of the bumps
+  are breaking**: `GeometricIntegrators` 0.17 → 0.18, `GeometricIntegratorsBase`
+  0.5.1 → 0.6, `NonlinearIntegrators` 0.2 → 0.4, `QuadratureRules` 0.1 → 0.2 and
+  `SimpleSolvers` 0.10.1 → 0.13. `CSV` (0.10.17) and `PrettyTables` (3.4) move
+  within their series; `BFloat16s`, `BenchmarkTools`, `CairoMakie`, `DataFrames`,
+  `GeometricProblems` and `NaNMath` already admitted their latest and are unchanged.
+  `Documenter` goes to 1.18 in `docs/Project.toml`.
+
+  The `SimpleSolvers` and `NonlinearIntegrators` bumps are one constraint, not two:
+  `NonlinearIntegrators` 0.3 pins `SimpleSolvers` 0.12 and 0.4.3 pins 0.13.2, so
+  there is no intermediate step either could take alone.
+
+- **`NonlinearIntegrators` is resolved from the General registry, not from GitHub
+  `main`.** It is registered now, under the same UUID, so the `[sources]` entry in
+  `Project.toml` and its duplicate in `docs/Project.toml` are both gone. Julia 1.11
+  remains the floor, but for a different reason — `NonlinearIntegrators` 0.4 declares
+  `julia = "1.11"` itself, where previously it was `[sources]` that required 1.11+.
+  `docs/Project.toml` keeps only the `SolverBenchmark = {path = ".."}` source.
+
+- **The one-layer network integrator is renamed throughout**, following
+  NonlinearIntegrators 0.3.0's rename of its whole exported surface:
+  `NonLinear_OneLayer_GML` → `ShallowNet`, `OneLayerNetwork_GML` →
+  `ShallowNetBasis`, and the seed `OGA1d_Legacy` → `OGA1dNormalEquations`. Only
+  `nonlinear_onelayer_method` and `scripts/nonlinear_activation_study.jl` construct
+  these, so the code change is three names; the rest is comments and docs that named
+  a type which no longer exists. Nothing about the method or its default seed
+  changes — `OGA1dNormalEquations` *is* the old `OGA1d_Legacy`, renamed upstream to
+  say what it is (the reference normal-equations fit in a `Float64` island) rather
+  than that it came first.
+
+  Without this the sweep does not run at all: the default seed is evaluated as a
+  keyword default, so the failure was an `UndefVarError` at construction, outside
+  the handler that would otherwise have recorded it as a non-converged row.
+
+- **The measured numbers in `docs/src/findings.md` have not been re-measured against
+  this stack.** The test suite passes 281/281 and the documentation builds, so every
+  `@example` re-executes and the generated tables and figures on the analysis pages
+  are current. The prose figures in `findings.md` come from `scripts/run_all.jl` at
+  `timing = :benchmark`, which was not re-run. `SimpleSolvers` moved three minor
+  versions and the network integrator was rewritten upstream, so those figures should
+  be treated as pre-upgrade until that sweep is repeated.
+
 - **The nonlinear sweep's regularization is scaled to the precision.** It ran
   `λ ∈ {0, 1e-3, 1e-5, 1e-7}`; all three nonzero values are far below `√eps(T)` at
   anything but `Float64`, so they could not lift a near-singular Jacobian in reduced

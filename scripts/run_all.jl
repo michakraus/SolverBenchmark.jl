@@ -1,5 +1,5 @@
 # Run every benchmark discussed in the documentation — both the implicit-midpoint
-# and the nonlinear-integrator (NonLinear_OneLayer_GML) experiment sets.
+# and the nonlinear-integrator (ShallowNet) experiment sets.
 #
 #     julia --project=. scripts/run_all.jl
 #
@@ -30,12 +30,12 @@ const ANALYSES = [
     toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0)
 ]
 
-# --- Nonlinear integrator (NonLinear_OneLayer_GML) ---------------------------
+# --- Nonlinear integrator (ShallowNet) ---------------------------------------
 #
 # Each nonlinear problem is run for exactly ten steps at three time steps, so the
 # time span scales with the step: the larger the step, the harder the implicit
 # network solve. The Lotka–Volterra systems are omitted — their degenerate
-# Lagrangians are not supported by NonLinear_OneLayer_GML.
+# Lagrangians are not supported by ShallowNet.
 
 const NONLINEAR_STEPS = ((0.1, (0.0, 1.0)), (1.0, (0.0, 10.0)), (10.0, (0.0, 100.0)))
 

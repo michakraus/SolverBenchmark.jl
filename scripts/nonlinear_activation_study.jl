@@ -1,14 +1,14 @@
-# Activation & seed study for the NonLinear_OneLayer_GML integrator.
+# Activation & seed study for the ShallowNet integrator.
 #
-# Question: the production default, ReLU^k with the `OGA1d_Legacy` seed, fails at
-# Float16 (the Newton Jacobian hits a SingularException). Does the
+# Question: the production default, ReLU^k with the `OGA1dNormalEquations` seed,
+# fails at Float16 (the Newton Jacobian hits a SingularException). Does the
 # working-precision QR seed `OGA1d`, paired with a smooth activation, fix Float16
 # without giving up Float64 accuracy? The matrix below answers it by varying seed
 # and activation independently.
 #
 # This is a standalone study: it injects `activation` / `initial_guess_method` into
 # `nonlinear_onelayer_method` via the `method_builder` hook and does NOT change the
-# committed production benchmark defaults (ReLU^k + OGA1d_Legacy).
+# committed production benchmark defaults (ReLU^k + OGA1dNormalEquations).
 #
 # Only OGA seeds are compared. Gradient-training seeds are not pursued:
 # `TrainingMethod` runs a per-step Adam loop (not viable in practice) and `LSGD`
@@ -26,14 +26,14 @@ using CSV
 using DataFrames
 using PrettyTables
 using Printf
-using NonlinearIntegrators: OGA1d, OGA1d_Legacy
+using NonlinearIntegrators: OGA1d, OGA1dNormalEquations
 
 # (label, activation, seed). The relu3 rows anchor the study: relu3_OGA1d isolates
 # the seed change (activation held fixed), relu3_OGA1dLeg reproduces the current
 # production benchmark.
 const ACTIVATION_MATRIX = [
     ("relu3_OGA1d", relu_k(3), OGA1d()),
-    ("relu3_OGA1dLeg", relu_k(3), OGA1d_Legacy()),
+    ("relu3_OGA1dLeg", relu_k(3), OGA1dNormalEquations()),
     ("elu_OGA1d", elu, OGA1d()),
     ("gelu_OGA1d", gelu, OGA1d())
 ]

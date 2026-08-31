@@ -40,9 +40,8 @@ of nonlinear iterations per time step, the run time, the residual, and — as an
 accuracy proxy — the drift of the conserved energy (and, where available, the
 error against the analytic solution).
 
-A second experiment set uses the neural-network variational integrator
-`NonLinear_OneLayer_GML` from
-[NonlinearIntegrators.jl](https://github.com/JuliaGNI/NonlinearIntegrators.jl)
+A second experiment set uses the neural-network variational integrator `ShallowNet`
+from [NonlinearIntegrators.jl](https://github.com/JuliaGNI/NonlinearIntegrators.jl)
 instead of implicit midpoint. Because that integrator's nonlinear system is
 near-singular, the sweep varies the solver's **regularization factor** ``\lambda``
 (in place of the initial guess): the ``\lambda = 0`` control plus six rungs of a
@@ -81,7 +80,7 @@ and a reduced set of four solver configurations (`Newton/Static`,
   highest-dimensional problem in the study.
 
 The Lotka–Volterra systems are omitted from the nonlinear-integrator study: their
-degenerate Lagrangians are not currently supported by `NonLinear_OneLayer_GML`.
+degenerate Lagrangians are not currently supported by `ShallowNet`.
 
 ## Key findings
 

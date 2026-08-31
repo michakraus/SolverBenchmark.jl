@@ -1,9 +1,9 @@
-# Second experiment set: the neural-network variational integrator
-# `NonLinear_OneLayer_GML` from NonlinearIntegrators.jl. Unlike the implicit
-# midpoint sweep (precision × solver × initial guess), this sweep varies the
-# solver's `regularization_factor` in place of the initial guess (the network
-# integrator brings its own seed — see `nonlinear_onelayer_method`), across the
-# same set of precisions and a reduced set of solver configurations.
+# Second experiment set: the neural-network variational integrator `ShallowNet`
+# from NonlinearIntegrators.jl. Unlike the implicit midpoint sweep (precision ×
+# solver × initial guess), this sweep varies the solver's `regularization_factor`
+# in place of the initial guess (the network integrator brings its own seed — see
+# `nonlinear_onelayer_method`), across the same set of precisions and a reduced
+# set of solver configurations.
 #
 # The network integrator solves a near-singular nonlinear system, so a nonzero
 # `regularization_factor` (a Levenberg–Marquardt-style shift added to the Newton
@@ -23,9 +23,9 @@ const NONLINEAR_DICT_AMOUNT = 400
     harmonic_oscillator_lode_spec(; timespan = (0.0, 1.0), timestep = 0.1)
 
 Return a [`ProblemSpec`](@ref) for the harmonic oscillator built as an
-**`lodeproblem`** (Lagrangian form), as required by the `NonLinear_OneLayer_GML`
-integrator. The analytic solution is provided (via
-`HarmonicOscillator.exact_solution_q`), so accuracy is measured directly.
+**`lodeproblem`** (Lagrangian form), as required by the `ShallowNet` integrator.
+The analytic solution is provided (via `HarmonicOscillator.exact_solution_q`), so
+accuracy is measured directly.
 
 The nonlinear network solve has a residual floor well above `8 eps(T)`, so the
 solver tolerance is relaxed to `256 eps(T)` (`f_abstol_factor = 256`); with the
@@ -156,17 +156,17 @@ elu(x) = ifelse(x > zero(x), x, exp(x) - one(x))
     nonlinear_onelayer_method(T; R = 8, S = 4, k = 3, bias_interval = [-π, π],
                               dict_amount = NONLINEAR_DICT_AMOUNT,
                               activation = relu_k(k),
-                              initial_guess_method = OGA1d_Legacy())
+                              initial_guess_method = OGA1dNormalEquations())
 
-Construct a `NonLinear_OneLayer_GML` integrator at precision `T`: a one-layer
-network with `S` neurons and the given `activation` (default `x -> max(0, x)^k`,
-i.e. [`relu_k`](@ref)), integrated with an `R`-point Gauss–Legendre quadrature.
+Construct a `ShallowNet` integrator at precision `T`: a one-layer network with
+`S` neurons and the given `activation` (default `x -> max(0, x)^k`, i.e.
+[`relu_k`](@ref)), integrated with an `R`-point Gauss–Legendre quadrature.
 The network basis and the quadrature are both built at `T` (the constructor
 requires them to share the element type), so the integration runs genuinely at
 the requested precision.
 
 `initial_guess_method` selects the network's built-in seed; it defaults to
-`OGA1d_Legacy()` (see below). The activation-study script overrides both
+`OGA1dNormalEquations()` (see below). The activation-study script overrides both
 `activation` and `initial_guess_method` (with `OGA1d()`) to compare smooth
 activations against the ReLU baseline; the `k` keyword is used only by the default
 `relu_k(k)` and is ignored when an explicit `activation` is passed.
@@ -175,10 +175,10 @@ function nonlinear_onelayer_method(::Type{T}; R = 8, S = 4, k = 3,
         bias_interval = [-π, π],
         dict_amount = NONLINEAR_DICT_AMOUNT,
         activation = relu_k(k),
-        initial_guess_method = OGA1d_Legacy()) where {T}
-    network = OneLayerNetwork_GML{T}(activation, S)
+        initial_guess_method = OGA1dNormalEquations()) where {T}
+    basis = ShallowNetBasis{T}(activation, S)
     quadrature = GaussLegendreQuadrature(T, R)
-    # `OGA1d_Legacy` (a Float64-island OGA) is the default rather than
+    # `OGA1dNormalEquations` (a Float64-island OGA) is the default rather than
     # NonlinearIntegrators' own default `OGA1d` (a working-precision QR seed),
     # because `OGA1d` regresses these problems with the ReLU activation: the double
     # pendulum solve stalls at a residual of ~0.18 for every dictionary size, and at
@@ -186,7 +186,7 @@ function nonlinear_onelayer_method(::Type{T}; R = 8, S = 4, k = 3,
     # tolerance instead of failing outright as a singular Jacobian — which would
     # make the benchmark report convergence it has not achieved. The activation
     # study passes `OGA1d()` explicitly; it pairs better with smooth activations.
-    NonLinear_OneLayer_GML(network, quadrature;
+    ShallowNet(basis, quadrature;
         bias_interval = T.(bias_interval), dict_amount = dict_amount,
         initial_guess_method = initial_guess_method)
 end

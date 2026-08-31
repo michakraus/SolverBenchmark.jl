@@ -1,6 +1,6 @@
 # Pendulum (Nonlinear Integrator)
 
-The mathematical pendulum benchmarked with the `NonLinear_OneLayer_GML` integrator
+The mathematical pendulum benchmarked with the `ShallowNet` integrator
 (see [Harmonic Oscillator (Nonlinear Integrator)](@ref) for the network setup and
 the meaning of the regularization sweep). `GeometricProblems.Pendulum` provides no
 Lagrangian (`lodeproblem`) form, so its two-dimensional phase-space `iodeproblem`

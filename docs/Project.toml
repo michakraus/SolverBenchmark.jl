@@ -8,13 +8,12 @@ PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 SolverBenchmark = "24f6d232-d5c3-46fd-865b-836e2e992cad"
 
 [sources]
-NonlinearIntegrators = {rev = "main", url = "https://github.com/JuliaGNI/NonlinearIntegrators.jl"}
 SolverBenchmark = {path = ".."}
 
 [compat]
-CairoMakie = "0.15.13"
-DataFrames = "1.8.2"
-Documenter = "1.17.0"
+CairoMakie = "0.15"
+DataFrames = "1.8"
+Documenter = "1.18"
 GeometricProblems = "0.8"
-NonlinearIntegrators = "0.2"
-PrettyTables = "3.4.0"
+NonlinearIntegrators = "0.4"
+PrettyTables = "3.4"

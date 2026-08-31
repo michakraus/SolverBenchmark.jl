@@ -1,13 +1,13 @@
 # Harmonic Oscillator (Nonlinear Integrator)
 
-This page benchmarks the neural-network variational integrator
-`NonLinear_OneLayer_GML` from
+This page benchmarks the neural-network variational integrator `ShallowNet` from
 [NonlinearIntegrators.jl](https://github.com/JuliaGNI/NonlinearIntegrators.jl) on
 the harmonic oscillator, built as a Lagrangian problem (`lodeproblem`). The
 integrator represents the trajectory over one time step with a one-layer network
 (`S = 4` neurons, activation ``x \mapsto \max(0,x)^3``) and enforces the discrete
 variational principle with an `R = 8`-point Gauss–Legendre quadrature; the network
-parameters are seeded with its built-in greedy (`OGA1d`) initial guess.
+parameters are seeded with its built-in greedy (`OGA1dNormalEquations`) initial
+guess.
 
 Unlike the [implicit midpoint](@ref "Harmonic Oscillator") analyses, this sweep
 varies the nonlinear solver's **regularization factor** ``\lambda`` (a

@@ -1,8 +1,8 @@
 # Toda Lattice (Nonlinear Integrator)
 
-The Toda lattice (`N = 16` sites) benchmarked with the `NonLinear_OneLayer_GML`
-integrator (see [Harmonic Oscillator (Nonlinear Integrator)](@ref) for the network
-setup and the regularization sweep). It is built as a 16-dimensional `lodeproblem`,
+The Toda lattice (`N = 16` sites) benchmarked with the `ShallowNet` integrator
+(see [Harmonic Oscillator (Nonlinear Integrator)](@ref) for the network setup and
+the regularization sweep). It is built as a 16-dimensional `lodeproblem`,
 so the network integrator solves a 16-dimensional implicit system at every step —
 the highest-dimensional problem in this study. Its Hamiltonian depends on both `q`
 and `p`; the energy drift is evaluated from the full state. No closed-form solution

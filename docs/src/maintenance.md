@@ -16,9 +16,9 @@ Build, dependency and CI notes for this repository.
   ```
 
   It does not inherit the root project.
-- `NonlinearIntegrators` is unregistered and comes from its GitHub `main` branch via
-  a `[sources]` entry, which requires Julia 1.11 or newer. **The same entry has to be
-  repeated in `docs/Project.toml`**, for the same reason.
+- `NonlinearIntegrators` comes from the General registry like every other dependency.
+  `docs/Project.toml` still carries a `[sources]` entry, but only the
+  `SolverBenchmark = {path = ".."}` one that points the docs at this working tree.
 
 ## Documentation
 

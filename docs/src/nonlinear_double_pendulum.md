@@ -1,6 +1,6 @@
 # Double Pendulum (Nonlinear Integrator)
 
-The double pendulum benchmarked with the `NonLinear_OneLayer_GML` integrator (see
+The double pendulum benchmarked with the `ShallowNet` integrator (see
 [Harmonic Oscillator (Nonlinear Integrator)](@ref) for the network setup and the
 regularization sweep). It is built as a two-dimensional `lodeproblem`; being
 chaotic and strongly nonlinear, it is a demanding test for the implicit network
