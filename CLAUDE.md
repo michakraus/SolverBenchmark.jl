@@ -23,19 +23,17 @@ belong only in `findings.md` — duplicating them anywhere invites the copies to
 
 ## Working rules
 
-- **Never trust a low-precision failure at face value.** `run_case` and
-  `run_nonlinear_case` catch every exception and record it as a non-converged row, so
-  an unimplemented method is indistinguishable from a diverging solve. Re-run the
-  single case with `quiet = false` and read the exception before writing anything up.
-  Every entry in the `BFloat16` layer was found this way, after first appearing as
-  "`BFloat16` does not converge here".
-- **A measured claim needs a measurement.** The docs quote specific counts and
-  residuals; if a change could move them, re-run `scripts/run_all.jl` and update
-  `docs/src/findings.md` from the CSVs rather than adjusting the prose by hand.
-- **`results/` is gitignored.** Figures and CSVs are build products; the docs
-  regenerate their own figures at build time.
+Three of the rules that used to be restated here are in `../CLAUDE.md`, which loads alongside
+this file — *never trust a caught failure*, *a measured claim needs a measurement*, and flushing
+`stdout`/`stderr` on long runs. Read them there. What is local to this repository is only where
+they bite:
+
+- **The catching harnesses are `run_case` and `run_nonlinear_case`.** Those are the two to
+  re-run with `quiet = false` when a row says "did not converge".
+- **The measurement is `scripts/run_all.jl`; the prose to regenerate is
+  `docs/src/findings.md`,** from the CSVs rather than by hand.
+- **`results/` is gitignored.** Figures and CSVs are build products; the docs regenerate their
+  own figures at build time.
 - After adding a package dependency, re-resolve the **docs** environment too
   (`julia --project=docs -e 'using Pkg; Pkg.resolve()'`) — it does not inherit the
   root project.
-- Long scripts should flush `stdout`/`stderr` explicitly: Julia buffers both when
-  redirected, so an interrupted run otherwise loses all of its progress output.

@@ -39,6 +39,14 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **`CLAUDE.md` stops restating three rules it shares with `Experiments/CLAUDE.md`.** *Never trust
+  a caught failure*, *a measured claim needs a measurement* and flushing `stdout`/`stderr` on long
+  runs were held near-verbatim in both files, which load together — inside a file whose own
+  opening paragraph says to keep each fact in exactly one place. Only what is local to this
+  repository remains: that the exception-catching harnesses are `run_case` and
+  `run_nonlinear_case`, and that the measurement is `scripts/run_all.jl` regenerating
+  `docs/src/findings.md` from the CSVs. Found by the harness-wide documentation audit of
+  2026-09-02; no rule changed, only where it is written.
 - **Every dependency moves to its latest registered version, and five of the bumps
   are breaking**: `GeometricIntegrators` 0.17 → 0.18, `GeometricIntegratorsBase`
   0.5.1 → 0.6, `NonlinearIntegrators` 0.2 → 0.4, `QuadratureRules` 0.1 → 0.2 and
