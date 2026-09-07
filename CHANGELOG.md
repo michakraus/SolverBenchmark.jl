@@ -39,6 +39,30 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **`.gitignore` gains root-anchored `/runs` and `/results`, and `CLAUDE.md` no longer claims
+  compliance it did not have.** The rule was `results/` — unanchored, and with no `runs` entry at
+  all — where `Packages/CLAUDE.md` requires a root-anchored `/runs` and `/results` in `.gitignore`
+  for both output directories. `CLAUDE.md` separately asserted "`results/` is gitignored", which
+  read as compliance and is what kept the gap invisible; that line is gone, since the parent file
+  owns the rule. Nothing was tracked under either directory, so no history changed. Note that no
+  driver currently writes to `runs/` — CSVs and figures both land in `results/` — so the `/runs`
+  entry is required by the house split rather than by anything the scripts do today.
+- **`CLAUDE.md`'s documentation index stops naming files that do not exist, and covers the one it
+  had missed.** The per-problem row listed six `nonlinear_*.md` counterparts; only four exist
+  (`double_pendulum`, `harmonic_oscillator`, `pendulum`, `toda_lattice`). The row is now a pattern
+  rather than an enumeration, so adding or removing a problem cannot make it wrong again. Separately
+  `docs/src/api.md` had no row at all, which left the index incomplete rather than duplicated; it
+  has one now. Also drops the paragraph narrating which rules "used to be restated here", which
+  described the file's own edit history rather than anything to do.
+- **The restated rules are now labelled as restatements, not as local facts.** The working-rules
+  bullets said they were "what is local to this repository", but all three are also in the
+  Documenter pages this file indexes — the docs-environment one verbatim at
+  `docs/src/maintenance.md`. They stay, because `CLAUDE.md` is loaded into every session and the
+  docs site is not; the preamble now says that is deliberate. The index rule above it is scoped to
+  "those **pages**", so it no longer reads as a rule this file immediately breaks.
+- **`CLAUDE.md`'s opening drops the changelog rule it shared with the tree.** "Describe the package
+  as it is in the docs; put anything about how it got that way in the changelog" is stated by
+  `~/.claude/CLAUDE.md` under *Every repository carries a `CHANGELOG.md`*, which this file inherits.
 - **`CLAUDE.md` stops restating three rules it shares with `Experiments/CLAUDE.md`.** *Never trust
   a caught failure*, *a measured claim needs a measurement* and flushing `stdout`/`stderr` on long
   runs were held near-verbatim in both files, which load together — inside a file whose own
