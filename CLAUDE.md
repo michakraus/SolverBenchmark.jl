@@ -12,7 +12,7 @@ only an index to it, plus the few rules that are about *how to change the reposi
 | Stdlib/docs dependencies, Documenter settings, re-measuring, CI | `docs/src/maintenance.md` |
 | The measured results | `docs/src/findings.md` |
 | The public API | `docs/src/api.md` |
-| Per-problem analyses | `docs/src/<problem>.md`, and `nonlinear_<problem>.md` where one exists |
+| Per-problem analyses | `docs/src/{harmonic_oscillator,pendulum,lotka_volterra_2d,lotka_volterra_4d,double_pendulum,toda_lattice}.md`, and `nonlinear_<problem>.md` where one exists |
 | User-facing overview | `README.md`, `docs/src/index.md` |
 
 Keep each fact in exactly one of those **pages**. The measured numbers in particular belong only

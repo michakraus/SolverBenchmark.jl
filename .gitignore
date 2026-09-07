@@ -16,7 +16,7 @@ build/
 docs/build/
 docs/site/
 
-# Run data and rendered output (produced by the driver scripts in scripts/)
+# Run data and rendered output (the drivers in scripts/ currently write only to /results)
 /runs
 /results
 
