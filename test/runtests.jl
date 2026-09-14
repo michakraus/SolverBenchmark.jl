@@ -78,9 +78,21 @@ using Test
     end
 
     @testset "at_tolerance flags a residual sitting at the target" begin
-        # The double pendulum's residual floor is ≈200 eps(T) at every precision,
-        # so with `f_abstol_factor = 256` every converged run stops *at* the
-        # target rather than below it — which is exactly what the flag is for.
+        # This problem's residual floor sits just under its target, not comfortably
+        # below it: at these initial conditions the residual is ≈250 eps(T) against a
+        # target of 256 eps(T), a margin of 2.4%. Whether a run converges is therefore
+        # decided by the last bits of the arithmetic — `converged` is an AND over all
+        # 100 steps, so one step landing a few percent over sinks it. Perturbing one
+        # initial coordinate by a single ulp moves the residual anywhere in
+        # 0.78…1.51× the target, and the runs above 1 do not converge.
+        # `Newton/Static` is the configuration that flips, having no line search to
+        # pull that step back; `Newton/Backtracking` does and stays converged.
+        #
+        # So assert what the flag is actually for — a converged run on this problem
+        # stops *at* the target rather than below it — over the runs that did
+        # converge. Those sit ≈8× above `f_abstol / 10`, which is real margin,
+        # where a blanket `all(st.at_tolerance)` is pinned to the 2.4% boundary and
+        # reports the platform's rounding rather than the solver's behaviour.
         spec = double_pendulum_spec(timespan = (0.0, 1.0), timestep = 0.01)
         df = run_benchmark(spec; precisions = (Float64,),
             solver_configs = default_solver_configs()[1:2],
@@ -90,8 +102,10 @@ using Test
         @test all(df.f_abstol .== 256 * eps(Float64))
 
         st = summary_table(df)
+        # the column survives `drop_empty` only when at least one row is flagged,
+        # so this also asserts that some run landed at the target
         @test "at_tolerance" in names(st)
-        @test all(st.at_tolerance)
+        @test all(st.at_tolerance[st.converged])
 
         # a run is flagged only when it converged *and* landed within a factor of
         # ten of its tolerance
