@@ -39,6 +39,39 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **`.gitignore` gains root-anchored `/runs` and `/results`, and `CLAUDE.md` no longer claims
+  compliance it did not have.** The rule was `results/` — unanchored, and with no `runs` entry at
+  all — where `Packages/CLAUDE.md` requires a root-anchored `/runs` and `/results` in `.gitignore`
+  for both output directories. `CLAUDE.md` separately asserted "`results/` is gitignored", which
+  read as compliance and is what kept the gap invisible; that line is gone, since the parent file
+  owns the rule. Nothing was tracked under either directory, so no history changed. Note that no
+  driver currently writes to `runs/` — CSVs and figures both land in `results/` — so the `/runs`
+  entry is required by the house split rather than by anything the scripts do today.
+- **`CLAUDE.md`'s documentation index no longer implies a nonlinear page for every problem, and
+  covers the one page it had missed.** The per-problem row named the six problem pages — all of
+  which exist — and then "the `nonlinear_*.md` **counterparts**". That glob matched exactly the four
+  pages that do exist (`double_pendulum`, `harmonic_oscillator`, `pendulum`, `toda_lattice`), so no
+  row ever named a missing file; what was wrong is that "counterparts" reads as one per problem, and
+  `lotka_volterra_2d`/`4d` have none. The row now says `nonlinear_<problem>.md` where one exists,
+  which states the actual relation. The six problem pages stay enumerated, because that list is the
+  only place a session sees the problem set without listing `docs/src/`. Separately `docs/src/api.md`
+  had no row at all, which left the index incomplete rather than duplicated; it has one now. Also
+  drops the paragraph narrating which rules "used to be restated here", which described the file's
+  own edit history rather than anything to do.
+- **The restated rules are now labelled as restatements, not as local facts.** The working-rules
+  bullets said they were "what is local to this repository", but all three are also in the
+  Documenter pages this file indexes — the docs-environment one verbatim at
+  `docs/src/maintenance.md`. They stay, because `CLAUDE.md` is loaded into every session and the
+  docs site is not; the preamble now says that is deliberate. The index rule above it is scoped to
+  "those **pages**", so it no longer reads as a rule this file immediately breaks. This corrects the
+  entry below, which called these three bullets the part that is "local to this repository": the
+  harnesses and `quiet = false` are at `docs/src/internals.md:63,74`, the `run_all.jl` regeneration
+  at `docs/src/maintenance.md:109-120`, and the docs re-resolve verbatim at
+  `docs/src/maintenance.md:11-18`. Nothing about the rules changed, only the claim that they were
+  unique to this file.
+- **`CLAUDE.md`'s opening drops the changelog rule it shared with the tree.** "Describe the package
+  as it is in the docs; put anything about how it got that way in the changelog" is stated by
+  `~/.claude/CLAUDE.md` under *Every repository carries a `CHANGELOG.md`*, which this file inherits.
 - **`CLAUDE.md` stops restating three rules it shares with `Experiments/CLAUDE.md`.** *Never trust
   a caught failure*, *a measured claim needs a measurement* and flushing `stdout`/`stderr` on long
   runs were held near-verbatim in both files, which load together — inside a file whose own
