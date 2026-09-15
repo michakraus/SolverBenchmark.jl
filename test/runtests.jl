@@ -90,9 +90,10 @@ using Test
         #
         # So assert what the flag is actually for — a converged run on this problem
         # stops *at* the target rather than below it — over the runs that did
-        # converge. Those sit ≈8× above `f_abstol / 10`, which is real margin,
-        # where a blanket `all(st.at_tolerance)` is pinned to the 2.4% boundary and
-        # reports the platform's rounding rather than the solver's behaviour.
+        # converge. Those sit ≈9.8× above `f_abstol / 10` at these conditions, which
+        # is real margin, where a blanket `all(st.at_tolerance)` is pinned to the 2.4%
+        # boundary and reports the platform's rounding rather than the solver's
+        # behaviour.
         spec = double_pendulum_spec(timespan = (0.0, 1.0), timestep = 0.01)
         df = run_benchmark(spec; precisions = (Float64,),
             solver_configs = default_solver_configs()[1:2],

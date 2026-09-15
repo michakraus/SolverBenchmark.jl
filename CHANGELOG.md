@@ -193,8 +193,8 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   anywhere in 0.78…1.51× the target. `Newton/Static` is the configuration that flips,
   having no line search to pull that step back. The assertion is now
   `all(st.at_tolerance[st.converged])` — every run that converged landed *at* the
-  target, which is what the flag reports, and those sit ≈8× above the
-  `f_abstol / 10` threshold.
+  target, which is what the flag reports, and those sit ≈9.8× above the
+  `f_abstol / 10` threshold at these conditions.
 
   **No measured number changes**, and no solver, problem or tolerance changes; this is
   the test's assertion only. The `f_abstol_factor = 256` choice and its justification at
