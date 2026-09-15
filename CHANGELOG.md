@@ -39,6 +39,14 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **The Julia floor is 1.12, raised from 1.11.** Julia 1.11.9 cannot compile this package's
+  `BFloat16` broadcasts: the `Julia min` job died with `LLVM ERROR: Cannot select: v16bf16 =
+  X86ISD::VFPROUND` and signal 6, which is a codegen failure in the compiler rather than anything
+  in this source. `main` had been red that way on every run since 2026-09-07. Because the `min`
+  alias resolves the lower bound of this entry, raising the floor is what moves that job onto a
+  Julia that can lower the instruction. **No measured number changes** — the sweep never ran on
+  the affected job, and nothing else about the package moves.
+
 - **`.gitignore` gains root-anchored `/runs` and `/results`, and `CLAUDE.md` no longer claims
   compliance it did not have.** The rule was `results/` — unanchored, and with no `runs` entry at
   all — where `Packages/CLAUDE.md` requires a root-anchored `/runs` and `/results` in `.gitignore`
