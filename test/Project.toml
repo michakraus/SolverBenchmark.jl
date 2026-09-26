@@ -1,0 +1,12 @@
+[deps]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+SolverBenchmark = "24f6d232-d5c3-46fd-865b-836e2e992cad"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+DataFrames = "1.8"
+
+[sources]
+SolverBenchmark = {path = ".."}
