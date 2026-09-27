@@ -3,9 +3,9 @@ using DataFrames
 using Test
 
 # The tests use `timing = :none` (no extra timing integration) and, where a whole
-# grid is swept, restrict to `Float64`, so the suite exercises every code path
-# without the cost of the full precision × solver × guess matrix (that breadth is
-# covered by the documentation and driver scripts).
+# grid is swept, restrict to `Float64`, so this file exercises `run_case` and
+# `run_benchmark` without the cost of the full precision × solver × guess matrix
+# (that breadth is covered by the documentation and driver scripts).
 
 @testset "run_case — harmonic oscillator (Float64)" begin
     spec = harmonic_oscillator_spec(timespan = (0.0, 1.0))
