@@ -39,6 +39,12 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **The test suite follows the shared layout.** The single `test/runtests.jl` is split into
+  `configurations.jl`, `benchmark.jl`, `problems.jl`, `nonlinear.jl` and `cache.jl`, each run in
+  its own `@safetestset` under the `core` group; the 281 assertions are unchanged. The test
+  dependencies move from `[extras]`/`[targets]` to `test/Project.toml`, which adds `SafeTestsets`
+  and `Aqua`, and lists `DataFrames` with the root's bound. The new `test/quality/aqua.jl` runs `Aqua.test_all`; its piracy check is marked
+  broken, because the `BFloat16` shims in `src/bfloat16.jl` are deliberate piracy.
 - **The Julia floor is 1.12, raised from 1.11.** Julia 1.11.9 cannot compile this package's
   `BFloat16` broadcasts: the `Julia min` job died with `LLVM ERROR: Cannot select: v16bf16 =
   X86ISD::VFPROUND` and signal 6, which is a codegen failure in the compiler rather than anything
