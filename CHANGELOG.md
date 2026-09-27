@@ -39,6 +39,20 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **Four lower bounds are raised to versions that can install.** On Julia 1.12, with each other
+  entry as written, the old floors do not resolve:
+
+  | entry | was | is | why the old floor fails |
+  |:--|:--|:--|:--|
+  | `GeometricIntegrators` | `0.18` | `0.18.4` | 0.18.0 needs `SimpleSolvers` 0.10 and 0.18.1–0.18.3 at most 0.12, below this package's `0.13, 0.14` |
+  | `GeometricIntegratorsBase` | `0.6` | `0.6.4` | 0.6.0–0.6.3 need `SimpleSolvers` 0.11–0.12 |
+  | `NaNMath` | `1` | `1.1.2` | `SymbolicUtils` 4, which `Symbolics` 7 needs, admits `NaNMath` only from 1.1.2 |
+  | `NonlinearIntegrators` | `0.4` | `0.4.1` | 0.4.0 needs `SimpleSolvers` 0.12 |
+
+  The new floor is in each case the lowest registered version that resolves. All floors together
+  resolve on 1.12.7. Nothing any user installs changes: the resolver never chose these versions,
+  because it could not. The `Downgrade` job in `CI.yml`, new with this change, runs the suite at
+  exactly these floors.
 - **The test suite follows the shared layout.** The single `test/runtests.jl` is split into
   `configurations.jl`, `benchmark.jl`, `problems.jl`, `nonlinear.jl` and `cache.jl`, each run in
   its own `@safetestset` under the `core` group; the 281 assertions are unchanged. The test
