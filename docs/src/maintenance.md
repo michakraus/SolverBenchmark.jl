@@ -59,7 +59,7 @@ Build, dependency and CI notes for this repository.
   tests; building the docs there too would duplicate hours of compute and race the other
   build for `gh-pages`.
 
-!!! warning "The documentation is built on macOS with Julia 1.11, and why"
+!!! warning "The documentation is built on macOS, and why"
     On Linux with Julia 1.12 (LLVM 18.1.7) the sweeps abort mid-run with a silent
     `SIGABRT`: exit 134, no exception, no stack trace, nothing on stderr even under a pty.
     A core dump named it:
@@ -92,10 +92,11 @@ Build, dependency and CI notes for this repository.
         excluded. The tell is timing: a no-op reaches `ExpandTemplates` half a minute
         later, where a genuine precompile of this stack takes eleven minutes.
 
-    So both jobs run on `macos-latest` with Julia `1.11`: arm64 uses a different LLVM
-    backend, and 1.11 predates this LLVM. Revisit once a Julia release carries a fixed
-    LLVM — the pin is a workaround for an upstream bug, not a requirement of this package,
-    which supports 1.11 upwards and is tested across all three platforms by `CI.yml`.
+    So both jobs run on `macos-latest`, which is arm64 and uses a different LLVM backend,
+    with Julia `1.12`, the package's `[compat]` floor. Revisit once a Julia release carries
+    a fixed LLVM — running on macOS is a workaround for an upstream bug, not a requirement
+    of this package, which supports 1.12 upwards and is tested across all three platforms
+    by `CI.yml`.
 - **Documenter inlines figures as base64**, so several figures per page comfortably
   exceed the default page-size limit. `size_threshold` (and
   `size_threshold_warn`) are raised in the `Documenter.HTML` block of

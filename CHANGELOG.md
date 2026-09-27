@@ -190,6 +190,12 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Fixed
 
+- **The documentation builds again: it runs on macOS with Julia 1.12, not 1.11.** Raising the
+  Julia floor to 1.12 left `Documenter.yml` pinned below it, so every `sweep` job failed at
+  `Pkg.develop` with *"julia version requirement from Project.toml's compat section not
+  satisfied"* and nothing was deployed. The pin now equals the floor. The job stays on
+  `macos-latest`, which is arm64: the Julia 1.12 `SIGABRT` described under *Changed* is in LLVM's
+  X86 backend and has never reproduced on arm64.
 - **The `at_tolerance` testset no longer asserts a boundary it cannot hold.** It
   required every solver configuration to converge on the double pendulum at
   `f_abstol_factor = 256`, where the residual floor is ≈250 eps(T) against a target of
