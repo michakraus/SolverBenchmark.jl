@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
-          version: '1.11'
+          version: '1.12'
       # All jobs of this workflow share one depot cache: the default cache name includes
       # the job name and the matrix values, which would give one near-identical cache per
       # matrix cell and a cold cache in the `documenter` job.
@@ -78,12 +78,13 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()
             Pkg.precompile()'
-      # Pinned to Julia 1.11 on macOS. On Linux with Julia 1.12 (LLVM 18.1.7) these
-      # sweeps abort mid-run with a silent SIGABRT, which a core dump identified as
-      # `llvm::SelectionDAGISel::CannotYetSelect` — LLVM's X86 backend failing to select an
-      # instruction while the JIT compiles a method, calling `report_fatal_error` and so
-      # `abort()`. Because it aborts inside LLVM it never becomes a Julia exception, which
-      # is why it produced no error, no stack trace and nothing on stderr even under a pty.
+      # Julia 1.12, the package's `[compat]` floor, on macOS. On Linux with Julia 1.12
+      # (LLVM 18.1.7) these sweeps abort mid-run with a silent SIGABRT, which a core
+      # dump identified as `llvm::SelectionDAGISel::CannotYetSelect` — LLVM's X86
+      # backend failing to select an instruction while the JIT compiles a method,
+      # calling `report_fatal_error` and so `abort()`. Because it aborts inside LLVM it
+      # never becomes a Julia exception, which is why it produced no error, no stack
+      # trace and nothing on stderr even under a pty.
       # It hit a different sweep each run — the host's target features and which
       # specialization is compiled decide, not the benchmark — so retrying was useless.
       # Neither BLAS threading nor OpenBLAS kernel dispatch was involved; both were tested
@@ -129,7 +130,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
-          version: '1.11'
+          version: '1.12'
       - uses: julia-actions/cache@v3
         with:
           cache-name: julia-cache;workflow=${{ github.workflow }}
