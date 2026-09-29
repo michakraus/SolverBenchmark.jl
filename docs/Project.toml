@@ -11,9 +11,4 @@ SolverBenchmark = "24f6d232-d5c3-46fd-865b-836e2e992cad"
 SolverBenchmark = {path = ".."}
 
 [compat]
-CairoMakie = "0.15"
-DataFrames = "1.8"
 Documenter = "1.18"
-GeometricProblems = "0.8, 0.9"
-NonlinearIntegrators = "0.4"
-PrettyTables = "3.4"

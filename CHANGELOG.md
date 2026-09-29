@@ -39,6 +39,12 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **`test/Project.toml` and `docs/Project.toml` carry no `[compat]` entry for a dependency of the
+  root `Project.toml`.** Both environments contain the package, so the resolver applies the root's
+  bounds to every shared dependency, and an entry there can only narrow them. Removed:
+  `DataFrames` from `test/Project.toml`; `CairoMakie`, `DataFrames`, `GeometricProblems`,
+  `NonlinearIntegrators` and `PrettyTables` from `docs/Project.toml`. The test-only and docs-only
+  bounds (`Aqua`, `SafeTestsets`, `Documenter`) stay.
 - **Four lower bounds are raised to versions that can install.** On Julia 1.12, with each other
   entry as written, the old floors do not resolve:
 
