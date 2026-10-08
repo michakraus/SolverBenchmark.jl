@@ -39,6 +39,8 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **CI uploads coverage from the `Julia 1 - ubuntu-latest` job instead of `Julia min`, and a test
+  job saves the Julia cache only when it succeeds.**
 - **`test/Project.toml` and `docs/Project.toml` carry no `[compat]` entry for a dependency of the
   root `Project.toml`.** Both environments contain the package, so the resolver applies the root's
   bounds to every shared dependency, and an entry there can only narrow them. Removed:
