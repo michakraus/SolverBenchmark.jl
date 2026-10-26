@@ -23,8 +23,9 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 - `scripts/f_abstol_study.jl`, comparing the relaxed `f_abstol_factor = 256`
   against the framework default for the specs that override it. Its study is the
   function `run_abstol_study(; resultsdir)`, so the output directory is a keyword
-  like the shared runners' rather than a load-time constant; running the script
-  still writes `results/f_abstol_study.md`.
+  like the shared runners' rather than a load-time constant. Running the script
+  still writes `results/f_abstol_study.md`; an `include` defines the function and
+  runs nothing, so a caller can pass `resultsdir` before any output is written.
 - `RegularizationConfig`, `scaled_regularization` and `regularization_exponent`:
   the nonlinear sweep's `regularization_factor` is now a function of the working
   precision rather than a number. Nonlinear rows carry the exponent and the value

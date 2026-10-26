@@ -117,4 +117,6 @@ function run_abstol_study(; resultsdir = joinpath(@__DIR__, "..", "results"))
     end
 end
 
-run_abstol_study()
+if abspath(PROGRAM_FILE) == @__FILE__
+    run_abstol_study()
+end
