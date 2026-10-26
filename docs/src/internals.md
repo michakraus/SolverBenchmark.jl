@@ -37,7 +37,7 @@ constraint worth preserving when extending it.
 | `src/cache.jl` | [`cached_sweep`](@ref), the seam that lets the documentation build compute one page's sweeps per CI job — see [Documentation](@ref). |
 | `src/bfloat16.jl` | The `BFloat16` compatibility layer — see [Low-Precision Support](@ref). |
 | `src/plots.jl` | CairoMakie helpers, [`summary_table`](@ref), [`markdown_table`](@ref). |
-| `scripts/` | `midpoint_analysis.jl`/`nonlinear_analysis.jl` shared runners, one script per example, `run_all.jl` (everything in these docs), and the standalone `nonlinear_activation_study.jl`/`f_abstol_study.jl`. All write CSV and figures to `results/` (gitignored) with ``\Delta t`` embedded in the file names. |
+| `scripts/` | `midpoint_analysis.jl`/`nonlinear_analysis.jl` shared runners, one script per example, `run_all.jl` (everything in these docs), and the standalone `nonlinear_activation_study.jl`/`f_abstol_study.jl`. All write CSV and figures to `results/` with ``\Delta t`` embedded in the file names; the shared runners and both studies take a `resultsdir` keyword to redirect the output. |
 
 A problem is described entirely by a [`ProblemSpec`](@ref): a name, a
 `builder(T)` returning the problem at precision `T`, an `energy` closure, an

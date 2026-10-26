@@ -9,15 +9,12 @@
 # converged-run counts and the residual range, so the override can be kept only where
 # it earns its keep.
 #
-# Writes `results/f_abstol_study.md`.
+# Writes `results/f_abstol_study.md`; `run_abstol_study(; resultsdir)` redirects it.
 
 using SolverBenchmark
 using DataFrames
 using Printf
 import Markdown
-
-const RESULTS = joinpath(@__DIR__, "..", "results")
-mkpath(RESULTS)
 
 # A copy of `spec` with a different residual tolerance factor.
 function retune(spec::ProblemSpec, factor)
@@ -44,8 +41,6 @@ function summarise(label, df, factor)
     rows
 end
 
-rows = []
-
 # Julia buffers stdout/stderr when they are redirected to a file, so progress is
 # printed explicitly and flushed: that way a run that has to be interrupted still
 # shows how far it got, and any warning the runtime writes (which is *not*
@@ -61,56 +56,65 @@ function sweep(label, factor, run)
     df
 end
 
-# --- implicit midpoint -------------------------------------------------------
+# Runs both sweeps at both factors and writes `f_abstol_study.md` into `resultsdir`.
+function run_abstol_study(; resultsdir = joinpath(@__DIR__, "..", "results"))
+    mkpath(resultsdir)
+    rows = []
 
-const MIDPOINT_CASES = [
-    ("DoublePendulum Δt=0.01",
-        double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.01)),
-    ("DoublePendulum Δt=0.1", double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.1)),
-    ("TodaLattice Δt=0.1", toda_lattice_spec(timespan = (0.0, 100.0), timestep = 0.1)),
-    ("TodaLattice Δt=1.0", toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0))
-]
+    # --- implicit midpoint ---------------------------------------------------
 
-for (label, spec) in MIDPOINT_CASES, factor in FACTORS
+    midpoint_cases = [
+        ("DoublePendulum Δt=0.01",
+            double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.01)),
+        ("DoublePendulum Δt=0.1",
+            double_pendulum_spec(timespan = (0.0, 10.0), timestep = 0.1)),
+        ("TodaLattice Δt=0.1", toda_lattice_spec(timespan = (0.0, 100.0), timestep = 0.1)),
+        ("TodaLattice Δt=1.0", toda_lattice_spec(timespan = (0.0, 100.0), timestep = 1.0))
+    ]
 
-    df = sweep(label,
-        factor,
-        () -> run_benchmark(retune(spec, factor); timing = :none, verbose = false, quiet = true))
-    append!(rows, summarise(label, df, factor))
+    for (label, spec) in midpoint_cases, factor in FACTORS
+
+        df = sweep(label,
+            factor,
+            () -> run_benchmark(retune(spec, factor); timing = :none, verbose = false, quiet = true))
+        append!(rows, summarise(label, df, factor))
+    end
+
+    # --- nonlinear integrator ------------------------------------------------
+    #
+    # Only Δt = 0.1 is swept: Δt = 1.0 and 10.0 converge nowhere at either factor, so
+    # they cannot discriminate between them.
+
+    nonlinear_cases = [
+        ("HarmonicOscillatorLODE Δt=0.1",
+            harmonic_oscillator_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
+        ("PendulumLODE Δt=0.1", pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
+        ("DoublePendulumLODE Δt=0.1",
+            double_pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
+        ("TodaLatticeLODE Δt=0.1",
+            toda_lattice_lode_spec(timespan = (0.0, 1.0), timestep = 0.1))
+    ]
+
+    for (label, spec) in nonlinear_cases, factor in FACTORS
+
+        df = sweep(label,
+            factor,
+            () -> run_nonlinear_benchmark(retune(spec, factor); timing = :none, verbose = false, quiet = true))
+        append!(rows, summarise(label, df, factor))
+    end
+
+    # --- report --------------------------------------------------------------
+
+    out = DataFrame(rows)
+    show(stdout, out; allrows = true, allcols = true)
+    println()
+
+    open(joinpath(resultsdir, "f_abstol_study.md"), "w") do io
+        println(io, "# `f_abstol_factor`: 8 vs. 256\n")
+        println(io, "Converged runs and the residual range over the converged runs, ")
+        println(io, "for the specs that override the framework default.\n")
+        print(io, markdown_table(out))
+    end
 end
 
-# --- nonlinear integrator ----------------------------------------------------
-#
-# Only Δt = 0.1 is swept: Δt = 1.0 and 10.0 converge nowhere at either factor, so
-# they cannot discriminate between them.
-
-const NONLINEAR_CASES = [
-    ("HarmonicOscillatorLODE Δt=0.1",
-        harmonic_oscillator_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
-    ("PendulumLODE Δt=0.1", pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
-    ("DoublePendulumLODE Δt=0.1",
-        double_pendulum_lode_spec(timespan = (0.0, 1.0), timestep = 0.1)),
-    ("TodaLatticeLODE Δt=0.1",
-        toda_lattice_lode_spec(timespan = (0.0, 1.0), timestep = 0.1))
-]
-
-for (label, spec) in NONLINEAR_CASES, factor in FACTORS
-
-    df = sweep(label,
-        factor,
-        () -> run_nonlinear_benchmark(retune(spec, factor); timing = :none, verbose = false, quiet = true))
-    append!(rows, summarise(label, df, factor))
-end
-
-# --- report ------------------------------------------------------------------
-
-out = DataFrame(rows)
-show(stdout, out; allrows = true, allcols = true)
-println()
-
-open(joinpath(RESULTS, "f_abstol_study.md"), "w") do io
-    println(io, "# `f_abstol_factor`: 8 vs. 256\n")
-    println(io, "Converged runs and the residual range over the converged runs, ")
-    println(io, "for the specs that override the framework default.\n")
-    print(io, markdown_table(out))
-end
+run_abstol_study()
