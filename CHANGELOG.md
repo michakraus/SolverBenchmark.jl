@@ -216,6 +216,11 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Fixed
 
+- **The package precompiles again with BFloat16s 0.6.3, which defines `fma` for `BFloat16`.**
+  The local `Base.fma(::BFloat16, ::BFloat16, ::BFloat16)` shim overwrote that method, and
+  precompilation refuses an overwritten method, so every test job failed in Aqua's
+  persistent-task check. The shim is gone and the BFloat16s floor is `0.6.3`, the first release
+  with the method; 0.5.1, 0.6.1 and 0.6.2 have no `fma` method for `BFloat16`.
 - **The documentation builds again: it runs on macOS with Julia 1.12, not 1.11.** Raising the
   Julia floor to 1.12 left `Documenter.yml` pinned below it, so every `sweep` job failed at
   `Pkg.develop` with *"julia version requirement from Project.toml's compat section not

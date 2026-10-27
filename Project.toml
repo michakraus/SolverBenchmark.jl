@@ -22,7 +22,7 @@ QuadratureRules = "a08977f5-a20d-4b99-b11f-f5ea535e0575"
 SimpleSolvers = "36b790f5-6434-4fbe-b711-1f64a1e2f6a2"
 
 [compat]
-BFloat16s = "0.5, 0.6"
+BFloat16s = "0.6.3"
 BenchmarkTools = "1.8.0"
 CSV = "0.10.17, 1.1"
 CairoMakie = "0.15"
