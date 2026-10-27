@@ -21,7 +21,11 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   `"BFloat16s.BFloat16"` inside a Documenter `@example` sandbox, and the plotting
   code drops rows whose precision label it does not recognise.
 - `scripts/f_abstol_study.jl`, comparing the relaxed `f_abstol_factor = 256`
-  against the framework default for the specs that override it.
+  against the framework default for the specs that override it. Its study is the
+  function `run_abstol_study(; resultsdir)`, so the output directory is a keyword
+  like the shared runners' rather than a load-time constant. Running the script
+  still writes `results/f_abstol_study.md`; an `include` defines the function and
+  runs nothing, so a caller can pass `resultsdir` before any output is written.
 - `RegularizationConfig`, `scaled_regularization` and `regularization_exponent`:
   the nonlinear sweep's `regularization_factor` is now a function of the working
   precision rather than a number. Nonlinear rows carry the exponent and the value
@@ -212,6 +216,11 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Fixed
 
+- **The package precompiles again with BFloat16s 0.6.3, which defines `fma` for `BFloat16`.**
+  The local `Base.fma(::BFloat16, ::BFloat16, ::BFloat16)` shim overwrote that method, and
+  precompilation refuses an overwritten method, so every test job failed in Aqua's
+  persistent-task check. The shim is gone and the BFloat16s floor is `0.6.3`, the first release
+  with the method; 0.5.1, 0.6.1 and 0.6.2 have no `fma` method for `BFloat16`.
 - **The documentation builds again: it runs on macOS with Julia 1.12, not 1.11.** Raising the
   Julia floor to 1.12 left `Documenter.yml` pinned below it, so every `sweep` job failed at
   `Pkg.develop` with *"julia version requirement from Project.toml's compat section not

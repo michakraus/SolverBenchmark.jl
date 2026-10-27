@@ -36,14 +36,9 @@ Base.Integer(x::BFloat16) = Int(x)
 # recurses until the stack overflows. That is what the pendulum LODE's Lagrangian hits.
 Base.sincos(x::BFloat16) = BFloat16.(sincos(Float32(x)))
 
-# Two-argument `atan`, `fma` and `mod2pi` are likewise absent (one-argument `atan`,
-# `muladd`, `hypot` and `sincospi` are covered by BFloat16s and need no shim). `fma`
-# via `Float32` is correctly rounded: 24 significand bits is more than the 16 an exact
-# `BFloat16` product needs.
+# Two-argument `atan` and `mod2pi` are likewise absent. BFloat16s covers `fma`, `muladd`,
+# `hypot`, `sincospi` and one-argument `atan`, so they need no shim.
 Base.atan(y::BFloat16, x::BFloat16) = BFloat16(atan(Float32(y), Float32(x)))
-function Base.fma(x::BFloat16, y::BFloat16, z::BFloat16)
-    BFloat16(fma(Float32(x), Float32(y), Float32(z)))
-end
 Base.mod2pi(x::BFloat16) = BFloat16(mod2pi(Float32(x)))
 
 # --- NaNMath ------------------------------------------------------------------
