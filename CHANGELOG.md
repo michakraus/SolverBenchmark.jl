@@ -43,6 +43,19 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **The bounds move to `NonlinearIntegrators` 0.5 and the `GeometricBase` 0.15 releases it builds
+  on.** `NonlinearIntegrators = "0.5"` (from `"0.4.1"`): every 0.4 release requires
+  `GeometricBase` 0.14, so it could not install beside the other floors below.
+  `GeometricIntegrators = "0.18.6"` (from `"0.18.4"`), `GeometricIntegratorsBase = "0.6.9"` (from
+  `"0.6.4"`), `GeometricProblems = "0.9.1"` (from `"0.8, 0.9"`) and `QuadratureRules = "0.2.2"` (from
+  `"0.2"`) are the first releases on `GeometricBase` 0.15; `SimpleSolvers = "0.14.2"` (from
+  `"0.13, 0.14"`) is the floor that `NonlinearIntegrators` 0.5 requires. The Julia floor stays
+  1.12. Nothing in the code changes. `NonlinearIntegrators` 0.5 solves the near-singular network
+  Newton system with a rank-revealing linear solve, so the nonlinear runs converge at λ = 0 as at
+  λ > 0: the test that asserted the λ = 0 run stalls now asserts that it converges, and
+  `KNOWN_ISSUES.md` K5 records that the documentation and the comments of `src/nonlinear.jl`,
+  measured on 0.4, still describe regularization as required. These bounds replace those of the
+  entry on the four lower bounds below.
 - **CI uploads coverage from the `Julia 1 - ubuntu-latest` job instead of `Julia min`, and a test
   job saves the Julia cache only when it succeeds.**
 - **`test/Project.toml` and `docs/Project.toml` carry no `[compat]` entry for a dependency of the
