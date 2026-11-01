@@ -54,15 +54,16 @@ using Test
     newton = nonlinear_solver_configs()[2]                          # Newton/Backtracking
     method = nonlinear_onelayer_method(Float64; dict_amount = 100)
 
-    @testset "regularization is required for convergence (Float64)" begin
-        # a nonzero regularization factor is essential: the network Newton
-        # system is near-singular, so λ = 0 stalls while λ > 0 converges
+    @testset "the solve converges with and without regularization (Float64)" begin
+        # the network Newton system is near-singular; NonlinearIntegrators solves it with a
+        # rank-revealing linear solve, whose minimum-norm step converges at λ = 0 as at λ > 0
         reg0 = run_nonlinear_case(
             spec, Float64, newton, 0.0, method; timing = :none, quiet = true)
         regλ = run_nonlinear_case(
             spec, Float64, newton, 1e-5, method; timing = :none, quiet = true)
         @test reg0.problem == "HarmonicOscillatorLODE"
-        @test !reg0.converged
+        @test reg0.converged
+        @test reg0.accuracy !== missing && reg0.accuracy < 1e-8
         @test regλ.converged
         @test regλ.iterations_mean ≥ 1
         @test regλ.accuracy !== missing && regλ.accuracy < 1e-8      # analytic reference available
