@@ -149,8 +149,8 @@ using Test
         ("DoublePendulumLODE", double_pendulum_lode_spec),
         ("TodaLatticeLODE", toda_lattice_lode_spec))
         s = mk(timespan = (0.0, 1.0), timestep = 0.1)
-        # rung 2 = 16√eps(Float64); measured, every rung converges here and
-        # λ = 0 converges on none of the three
+        # rung 2 = 16√eps(Float64); measured, every rung converges here, and
+        # so does λ = 0 on all three
         reg = nonlinear_regularization_factors()[3]
         row = run_nonlinear_case(
             s, Float64, newton, reg, method; timing = :none, quiet = true)
