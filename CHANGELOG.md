@@ -47,8 +47,8 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   no longer describe regularization as required (closes `KNOWN_ISSUES.md` K5).**
   `NonlinearIntegrators` 0.5 takes the minimum-norm step of a rank-revealing Newton solve, so at
   `Float64` λ = 0 converges for all four solvers wherever the rungs do, except one marginal row
-  (the oscillator at Δt = 10.0, `Newton/Static`, rung 1): λ = 0 converges on 24 of 192 rows (from 8 of 176) against 24–29 per rung
-  (from 23–31). The `Float64` Toda lattice converges 28/28 in 2.6–3.0 iterations per step (from
+  (the oscillator at Δt = 10.0, `Newton/Static`, rung 1): λ = 0 converges on 24 of 192 rows
+  (from 8 of 176) against 24–29 per rung (from 23–31). The `Float64` Toda lattice converges 28/28 in 2.6–3.0 iterations per step (from
   24/28, none at λ = 0, about 12), the double pendulum 28/28 with `Newton/Static` included (from
   19/28), and the pendulum 28/28 (from 24/28). `Float32` converges on 40 of 336 nonlinear rows
   (from 54 of 308), `Float64` on 141 of 336 (from 116 of 308). At `BFloat16` the integrator is no
