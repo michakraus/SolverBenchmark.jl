@@ -52,22 +52,22 @@ plot_energy_drift(df; panelcol = :regularization)
 
 ## Discussion
 
-- **Regularization is again decisive**, and again flat across the ladder: at
-  `Float64`, `Backtracking` and `StrongWolfe` converge at every one of the six rungs
-  and at none of them for ``\lambda = 0``, taking ``\approx 15`` iterations per step
-  with an energy drift of ``2.11 \times 10^{-4}`` that is identical to three
-  significant figures at every rung. `DogLeg` (a trust-region method) is the most
-  robust here — it is the only configuration that makes progress even at
-  ``\lambda = 0``, and `Newton/Static` converges nowhere at any rung. That is the
-  clearest ordering of the four solver configurations anywhere in the study.
+- **Regularization is not needed here either**: at `Float64` all four solvers
+  converge at ``\lambda = 0`` and at every one of the six rungs, with an energy drift
+  of ``2.11 \times 10^{-4}`` that is identical to three significant figures at every
+  value. The solvers differ in cost, not in robustness: `Backtracking`, `StrongWolfe`
+  and `DogLeg` take 3.7–5.5 iterations per step, and `Newton/Static` 6.8–8.2. The
+  rungs do not change that ordering (3.9–4.4 iterations for the three at
+  ``\lambda = 0``, 7.8 for `Newton/Static`).
 - The chaotic dynamics give a larger energy drift than the integrable examples,
-  and the achievable step size is smaller — at ``\Delta t = 1.0`` and above the
-  solve struggles.
-- **Only `Float64` converges at all** (19/28). `Float32`, `Float16` and `BFloat16`
-  fail at every rung, and scaling ``\lambda`` to the precision does not change that:
-  the exception is raised in the OGA initial guess's Gram solve, which runs before the
-  Newton iteration `regularization_factor` acts on — see
-  [Harmonic Oscillator (Nonlinear Integrator)](@ref).
+  and the achievable step size is smaller — at ``\Delta t = 1.0`` and above no
+  configuration converges.
+- **Only `Float64` converges at all** (28/28). `Float32`, `Float16` and `BFloat16`
+  fail at every rung, and scaling ``\lambda`` to the precision does not change that.
+  `Float32` stalls on 26 of its 28 rows and raises the OGA initial guess's
+  `SingularException` on the other 2; `Float16` raises that exception, which runs
+  before the Newton iteration `regularization_factor` acts on, and at `BFloat16` the
+  integrator cannot be built — see [Harmonic Oscillator (Nonlinear Integrator)](@ref).
 
 ## Results table
 

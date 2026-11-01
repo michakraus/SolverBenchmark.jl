@@ -70,12 +70,13 @@ and a reduced set of four solver configurations (`Newton/Static`,
 ### Nonlinear Integrator
 
 - [Harmonic Oscillator (Nonlinear Integrator)](@ref) — the one-layer network
-  variational integrator, where a nonzero regularization factor is essential for
-  the Newton solve to converge.
+  variational integrator, swept over the solver's regularization factor; its Newton
+  solve converges at ``\lambda = 0``.
 - [Pendulum (Nonlinear Integrator)](@ref) — a nonlinear problem (built from the
   pendulum's phase-space `iodeproblem`).
 - [Double Pendulum (Nonlinear Integrator)](@ref) — a chaotic, strongly nonlinear
-  system; `DogLeg` is the most robust solver here.
+  system; `Newton/Static` needs about twice the iterations of the other solvers
+  here.
 - [Toda Lattice (Nonlinear Integrator)](@ref) — a 16-dimensional lattice, the
   highest-dimensional problem in the study.
 

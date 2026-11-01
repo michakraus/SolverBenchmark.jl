@@ -5,10 +5,11 @@
 # `nonlinear_onelayer_method`), across the same set of precisions and a reduced
 # set of solver configurations.
 #
-# The network integrator solves a near-singular nonlinear system, so a nonzero
-# `regularization_factor` (a Levenberg–Marquardt-style shift added to the Newton
-# Jacobian diagonal) is essential for convergence — which is exactly what this
-# experiment set is designed to expose. The shift is swept as a ladder of multiples of
+# The network integrator solves a near-singular nonlinear system. NonlinearIntegrators
+# takes the minimum-norm step of a rank-revealing Newton solve, so it converges at
+# `regularization_factor = 0`; the experiment set measures what the shift (a
+# Levenberg–Marquardt-style term added to the Newton Jacobian diagonal) costs or buys
+# at each precision. The shift is swept as a ladder of multiples of
 # `√eps(T)`, not as absolute numbers, because what counts as "small but not negligible"
 # is four orders of magnitude apart between `Float64` and `BFloat16`; see
 # `RegularizationConfig` and `nonlinear_regularization_factors`.
@@ -215,11 +216,11 @@ Return the [`RegularizationConfig`](@ref)s swept for the nonlinear integrator: t
 [`scaled_regularization`](@ref)) — seven in total.
 
 `λ = 0` is the control the rungs are read against. The network Newton system is
-near-singular, so the question the ladder answers is not *whether* a diagonal shift is
-needed but *how large* one has to be at a given precision — which is why the rungs are
-multiples of `√eps(T)` rather than absolute numbers: a shift small enough to be a nudge
-at `Float64` falls below the rounding error of a `Float16` Jacobian and cannot lift a
-singular one there.
+near-singular, but NonlinearIntegrators takes the minimum-norm step of a rank-revealing
+solve, so `λ = 0` converges; the ladder measures what a diagonal shift of a given size
+changes at a given precision. The rungs are multiples of `√eps(T)` rather than absolute
+numbers because a shift small enough to be a nudge at `Float64` falls below the rounding
+error of a `Float16` Jacobian.
 """
 function nonlinear_regularization_factors()
     [RegularizationConfig(0.0);

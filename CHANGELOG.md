@@ -43,6 +43,21 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **Key Findings and the nonlinear pages are measured again, on `NonlinearIntegrators` 0.5, and
+  no longer describe regularization as required (closes `KNOWN_ISSUES.md` K5).**
+  `NonlinearIntegrators` 0.5 takes the minimum-norm step of a rank-revealing Newton solve, so at
+  `Float64` every nonlinear sweep that converges at all converges at λ = 0 for all four solvers,
+  as at every rung: λ = 0 converges on 24 of 192 rows (from 8 of 176) against 24–29 per rung
+  (from 23–31). The `Float64` Toda lattice converges 28/28 in 2.6–3.0 iterations per step (from
+  24/28, none at λ = 0, about 12), the double pendulum 28/28 with `Newton/Static` included (from
+  19/28), and the pendulum 28/28 (from 24/28). `Float32` converges on 40 of 336 nonlinear rows
+  (from 54 of 308), `Float64` on 141 of 336 (from 116 of 308). At `BFloat16` the integrator is no
+  longer buildable (K8), so the 16-bit rows fail before the solve for two different reasons.
+  The implicit-midpoint numbers of Key Findings move with the stack as well: `Picard` converges
+  on 1 of 144 rows (from 44, K7), `Float64` on 248 of 288 (from 263), and the robust solvers
+  take about 1.4 iterations per step (from 1.15). `docs/src/index.md`, the comment above the
+  nonlinear set in `src/nonlinear.jl` and the docstring of `nonlinear_regularization_factors`
+  follow. K6 records the implicit-midpoint pages that still quote the earlier numbers.
 - **The bounds move to `NonlinearIntegrators` 0.5 and the `GeometricBase` 0.15 releases it builds
   on.** `NonlinearIntegrators = "0.5"` (from `"0.4.1"`): every 0.4 release requires
   `GeometricBase` 0.14, so it could not install beside the other floors below.
@@ -52,9 +67,8 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   `"0.13, 0.14"`) is the floor that `NonlinearIntegrators` 0.5 requires. The Julia floor stays
   1.12. Nothing in the code changes. `NonlinearIntegrators` 0.5 solves the near-singular network
   Newton system with a rank-revealing linear solve, so the nonlinear runs converge at λ = 0 as at
-  λ > 0: the test that asserted the λ = 0 run stalls now asserts that it converges, and
-  `KNOWN_ISSUES.md` K5 records that the documentation and the comments of `src/nonlinear.jl`,
-  measured on 0.4, still describe regularization as required. These bounds replace those of the
+  λ > 0: the test that asserted the λ = 0 run stalls now asserts that it converges, and the
+  documentation is measured again on 0.5 (see the entry above). These bounds replace those of the
   entry on the four lower bounds below.
 - **CI uploads coverage from the `Julia 1 - ubuntu-latest` job instead of `Julia min`, and a test
   job saves the Julia cache only when it succeeds.**

@@ -53,19 +53,21 @@ plot_energy_drift(df; panelcol = :regularization)
 
 ## Discussion
 
-- Despite its dimensionality the lattice is the cleanest case in the set: at
-  `Float64`, **all four solvers converge at all six rungs and none at
-  ``\lambda = 0``** — 24 of 28, a perfect split on ``\lambda > 0``. The
-  16-dimensional solve takes ``\approx 12`` iterations per step and conserves the
-  energy to ``3.75 \times 10^{-13}``, again indistinguishable from rung to rung across
-  a ladder spanning a factor of a thousand. Regularization here is purely a threshold.
+- Despite its dimensionality the lattice is a clean case: at `Float64`, **all four
+  solvers converge at ``\lambda = 0`` and at all six rungs** — 28 of 28. The
+  16-dimensional solve takes 2.6–3.0 iterations per step and conserves the energy to
+  ``3.75 \dots 3.84 \times 10^{-13}``, indistinguishable between ``\lambda = 0`` and
+  the rungs across a ladder spanning a factor of a thousand. Regularization is not
+  needed here.
 - Run times are higher than the low-dimensional examples (16 coupled network fits
   per step), which is the main cost visible here.
-- **Only `Float64` converges** (24/28); `Float32`, `Float16` and `BFloat16` fail at
-  every rung. Scaling ``\lambda`` to the precision does not help them, because the
-  exception is not the one ``\lambda`` addresses: it is raised in the OGA initial
-  guess's Gram solve, upstream of the Newton iteration — see
-  [Harmonic Oscillator (Nonlinear Integrator)](@ref).
+- **`Float32` converges at rungs 1 and 6 only** (8/28, all four solvers, at a residual
+  of ``3 \times 10^{-5}``), and the other 20 rows raise the OGA initial guess's
+  `SingularException`. That is the seed's marginality, not an optimum in ``\lambda``:
+  the exception is raised upstream of the Newton iteration, and ``\lambda`` only
+  perturbs the trajectory the next seed is built from — see
+  [Harmonic Oscillator (Nonlinear Integrator)](@ref). `Float16` and `BFloat16` fail
+  at every rung.
 
 ## Results table
 
