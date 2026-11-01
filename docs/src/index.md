@@ -70,12 +70,13 @@ and a reduced set of four solver configurations (`Newton/Static`,
 ### Nonlinear Integrator
 
 - [Harmonic Oscillator (Nonlinear Integrator)](@ref) — the one-layer network
-  variational integrator, where a nonzero regularization factor is essential for
-  the Newton solve to converge.
+  variational integrator, swept over the solver's regularization factor; its Newton
+  solve converges at ``\lambda = 0``.
 - [Pendulum (Nonlinear Integrator)](@ref) — a nonlinear problem (built from the
   pendulum's phase-space `iodeproblem`).
 - [Double Pendulum (Nonlinear Integrator)](@ref) — a chaotic, strongly nonlinear
-  system; `DogLeg` is the most robust solver here.
+  system; `Newton/Static` needs about twice the iterations of the other solvers
+  here.
 - [Toda Lattice (Nonlinear Integrator)](@ref) — a 16-dimensional lattice, the
   highest-dimensional problem in the study.
 
@@ -88,10 +89,9 @@ The [Key Findings](@ref) page collects what the two experiment sets measured. In
 brief:
 
 - **`Newton` with a robust line search, and `DogLeg`, are the most efficient**, at
-  about 1.15 iterations per step on the oscillator and pendulum. All six line
+  about 1.4 iterations per step on the oscillator and pendulum. All six line
   searches are comparably robust; the choice between them matters far less than the
-  choice of solver, and `Picard` is the outlier that fails outright on four of the
-  six problems.
+  choice of solver, and `Picard` is the outlier that converges almost nowhere.
 - **Precision sets the achievable accuracy**, and `Float32` already reaches the
   ``\mathcal{O}(\Delta t^2)`` discretization error.
 - **The two 16-bit formats show that the low-precision failures are about

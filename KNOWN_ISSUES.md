@@ -8,20 +8,43 @@
 - **kind:** not verified
 - **found:** 2026-09-27
 
-### K5 · The documentation and the comments of `src/nonlinear.jl` describe regularization as required, which NonlinearIntegrators 0.5 makes false.
+### K6 · The implicit-midpoint pages quote numbers that differ from what the current stack measures.
 
-- **location:** `docs/src/findings.md:120`
-- **evidence:** `docs/src/findings.md:120-164`, `docs/src/nonlinear_harmonic_oscillator.md:15-16`
-  and `:94-103`, `docs/src/nonlinear_pendulum.md:58`, `docs/src/nonlinear_double_pendulum.md:55-59`,
-  `docs/src/nonlinear_toda_lattice.md:57-61`, `docs/src/index.md:72-74`, the comment at
-  `src/nonlinear.jl:8-10` and the docstring of `nonlinear_regularization_factors` state that a
-  nonzero regularization factor is required for the network Newton solve to converge. They were
-  measured on NonlinearIntegrators 0.4, whose Newton step is an LU solve. NonlinearIntegrators 0.5
-  takes the minimum-norm step of a rank-revealing solve, and `run_nonlinear_case` on the 10-step
-  harmonic-oscillator spec converges at λ = 0 (1.8 Newton iterations on average, accuracy
-  1.42e-13) as at λ = 1e-5 (2.2 iterations, 1.41e-13). With the same settings the pendulum,
-  double-pendulum and Toda-lattice specs converge at λ = 0 and at every rung. The measurement
-  `scripts/run_all.jl` and the pages generated from it have to be run again on
-  NonlinearIntegrators 0.5.
+- **location:** `docs/src/harmonic_oscillator.md:75`
+- **evidence:** `scripts/run_all.jl` on GeometricIntegrators 0.18.7 and SimpleSolvers 0.14.3
+  measures `BFloat16` on the harmonic oscillator at Δt = 0.1 at 7/24, where
+  `docs/src/harmonic_oscillator.md:75` and `docs/src/precision.md:90` say 8/24; the pendulum at
+  Δt = 1.0 at 19/24, where `docs/src/pendulum.md:67` says 23/24; and `Picard` at 0 converged rows
+  on the pendulum, where `docs/src/pendulum.md:68` says it needs about 8 iterations per step.
+  The Lotka–Volterra, double-pendulum and Toda-lattice pages quote counts of the same kind.
+  `docs/src/findings.md` carries the current numbers.
 - **kind:** docs
+- **found:** 2026-11-01
+
+### K7 · `Picard` converges on 1 of 144 implicit-midpoint rows, and the cause is not known.
+
+- **location:** `src/configurations.jl:73`
+- **evidence:** `scripts/run_all.jl` on SimpleSolvers 0.14.3: of the 144 `Picard` rows, 57 raise
+  `Nonlinear Solver Exception: non-finite direction vector!` or the Hermite identical-times
+  `ArgumentError`, and 86 run to the end without meeting the tolerance. Outside the catching
+  harness, `_drive!` on `harmonic_oscillator_spec(timespan = (0.0, 100.0), timestep = 0.1)` at
+  `Float64` with `Picard` and `NoInitialGuess` raises nothing and returns
+  `(converged = false, total_iters = 2048, max_residual = 0.25)`: about two iterations per step,
+  far above `f_abstol = 1.8e-15`. The one converged row is `BFloat16` at Δt = 1.0, inside a
+  tolerance of `0.0625`. Whether SimpleSolvers' `Picard` or the options that `_solver_options`
+  passes to it stops the iteration is not checked.
+- **kind:** not verified
+- **found:** 2026-11-01
+
+### K8 · At `BFloat16` the `ShallowNet` integrator cannot be built.
+
+- **location:** `src/nonlinear.jl:190`
+- **evidence:** `nonlinear_onelayer_method(BFloat16)` raises
+  `DimensionMismatch: new dimensions (1, 11) must be consistent with array length 10` in
+  `NonlinearIntegrators.NetworkIntegratorCore` (`src/nvi/network_integrator_core.jl:28` of
+  NonlinearIntegrators 0.5.0), which reshapes `collect(zero(T):(one(T)/10):one(T))` into 11
+  columns. In `BFloat16` that range has 10 elements:
+  `length(zero(BFloat16):(one(BFloat16)/10):one(BFloat16)) == 10`. Every `BFloat16` row of the
+  nonlinear set is therefore recorded as non-converged without a solve.
+- **kind:** upstream
 - **found:** 2026-11-01

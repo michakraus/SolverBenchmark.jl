@@ -55,22 +55,21 @@ plot_energy_drift(df; panelcol = :regularization)
 
 ## Discussion
 
-- As for the harmonic oscillator, **a nonzero regularization factor is required**,
-  and any rung will do. At `Float64`, ``\lambda = 0`` converges for no solver; every
-  rung converges for all four, in ``\approx 2.3`` iterations per step, conserving the
-  energy to ``8.05 \times 10^{-8}`` — to three significant figures the *same* drift at
-  every rung, across a ladder spanning a factor of a thousand.
+- As for the harmonic oscillator, **regularization is not needed**. At `Float64` all
+  four solvers converge at ``\lambda = 0`` and at every rung, in 2.0 iterations per
+  step (3.0 at rung 6), conserving the energy to ``8.05 \times 10^{-8}`` — to three
+  significant figures the *same* drift at every value, across a ladder spanning a
+  factor of a thousand.
 - The pendulum's nonlinearity means the solve needs a few more iterations per step
   than the (linear) oscillator.
-- **`Float32` converges from rung 2 up** (23/28): all four solvers at rungs 2–6, but
-  three of four at ``\lambda = 0`` and **none at rung 1**. A rung that is worse than no
-  regularization at all is the signature of the seed, not the solver — the OGA guess is
-  rebuilt from the previous step's solution, so ``\lambda`` perturbs the trajectory it
-  is built from and can push a later step's Gram matrix into rank deficiency. See
+- **Only `Float64` converges** (28/28). `Float32` fails at every value of
+  ``\lambda``: every one of its 28 rows raises the `SingularException` of the OGA
+  initial guess's Gram solve. See
   [Harmonic Oscillator (Nonlinear Integrator)](@ref) for that mechanism.
-- **Both 16-bit formats fail at every rung** (0/28 each, against 23/28 at `Float32`
-  and 24/28 at `Float64`). The exception again comes from the OGA initial guess's Gram
-  solve, not from the Newton Jacobian, so `regularization_factor` cannot reach it.
+- **Both 16-bit formats fail at every rung** (0/28 each). The `Float16` exception
+  again comes from the OGA initial guess's Gram solve, not from the Newton Jacobian, so
+  `regularization_factor` cannot reach it; at `BFloat16` the integrator cannot be
+  built.
 
 ## Results table
 
