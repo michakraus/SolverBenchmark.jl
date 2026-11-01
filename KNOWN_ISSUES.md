@@ -8,7 +8,7 @@
 - **kind:** not verified
 - **found:** 2026-09-27
 
-### K6 · The implicit-midpoint pages quote numbers that the current stack no longer measures.
+### K6 · The implicit-midpoint pages quote numbers that differ from what the current stack measures.
 
 - **location:** `docs/src/harmonic_oscillator.md:75`
 - **evidence:** `scripts/run_all.jl` on GeometricIntegrators 0.18.7 and SimpleSolvers 0.14.3
@@ -16,9 +16,8 @@
   `docs/src/harmonic_oscillator.md:75` and `docs/src/precision.md:90` say 8/24; the pendulum at
   Δt = 1.0 at 19/24, where `docs/src/pendulum.md:67` says 23/24; and `Picard` at 0 converged rows
   on the pendulum, where `docs/src/pendulum.md:68` says it needs about 8 iterations per step.
-  `docs/src/index.md:92` says 1.15 iterations per step on the oscillator and the pendulum; the
-  run measures 1.4. The Lotka–Volterra, double-pendulum and Toda-lattice pages quote counts of
-  the same kind. `docs/src/findings.md` carries the current numbers.
+  The Lotka–Volterra, double-pendulum and Toda-lattice pages quote counts of the same kind.
+  `docs/src/findings.md` carries the current numbers.
 - **kind:** docs
 - **found:** 2026-11-01
 

@@ -105,7 +105,7 @@ plot_accuracy(df; panelcol = :regularization)
   (``3.3 \dots 7.6 \times 10^{-14}``).
 - **The choice of line search barely matters**: all of `Static`, `Backtracking`,
   `StrongWolfe` and `DogLeg` take the same number of iterations at each value of
-  ``\lambda``, because the Newton step is already close to optimal.
+  ``\lambda``, to within 0.2 per step, because the Newton step is already close to optimal.
 - **Both 16-bit formats fail, and regularization cannot reach the reason.** No
   configuration converges at `Float16` or `BFloat16` (0/28 each), at any rung, and
   neither failure is in the Newton solve. At `BFloat16` the integrator cannot be

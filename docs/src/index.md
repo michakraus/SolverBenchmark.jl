@@ -89,10 +89,9 @@ The [Key Findings](@ref) page collects what the two experiment sets measured. In
 brief:
 
 - **`Newton` with a robust line search, and `DogLeg`, are the most efficient**, at
-  about 1.15 iterations per step on the oscillator and pendulum. All six line
+  about 1.4 iterations per step on the oscillator and pendulum. All six line
   searches are comparably robust; the choice between them matters far less than the
-  choice of solver, and `Picard` is the outlier that fails outright on four of the
-  six problems.
+  choice of solver, and `Picard` is the outlier that converges almost nowhere.
 - **Precision sets the achievable accuracy**, and `Float32` already reaches the
   ``\mathcal{O}(\Delta t^2)`` discretization error.
 - **The two 16-bit formats show that the low-precision failures are about

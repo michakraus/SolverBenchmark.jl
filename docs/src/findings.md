@@ -41,8 +41,8 @@ of 112 runs each (4 precisions × 4 solvers × 7 regularization factors).
 
 ## Reading the residual columns
 
-**`Bisection` stops at the tolerance it was asked for**, where the others stop short of
-it. Its median residual over the converged runs is `0.98` times `f_abstol`, against
+**`Bisection` stops at the tolerance it was asked for**, where the others overshoot it.
+Its median residual over the converged runs is `0.98` times `f_abstol`, against
 `0.60` to `0.88` times `f_abstol` for the other configurations. This is not a defect —
 `Bisection` is also the most robust of the six, so the two facts are related rather
 than in tension.
@@ -125,10 +125,10 @@ collision.
 
 - **The Newton solve does not need regularization.** NonlinearIntegrators takes the
   minimum-norm step of a rank-revealing solve, so the near-singular network Jacobian
-  does not stop the iteration. At `Float64`, ``\lambda = 0`` converges wherever a rung
-  does: every cell of four solvers is 4/4 at ``\lambda = 0`` and at all six rungs on
-  the four problems at ``\Delta t = 0.1`` and on the oscillator at
-  ``\Delta t = 1.0``. Over the twelve sweeps, 192 rows per value:
+  does not stop the iteration. At `Float64`, ``\lambda = 0`` converges wherever the rungs
+  do, but for one marginal row (below): every cell of four solvers is 4/4 at
+  ``\lambda = 0`` and at all six rungs on the four problems at ``\Delta t = 0.1`` and
+  on the oscillator at ``\Delta t = 1.0``. Over the twelve sweeps, 192 rows per value:
 
   | ``\lambda`` | 0 | rung 1 | rung 2 | rung 3 | rung 4 | rung 5 | rung 6 |
   |:--|--:|--:|--:|--:|--:|--:|--:|
