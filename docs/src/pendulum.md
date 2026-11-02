@@ -53,21 +53,24 @@ plot_energy_drift(df)
 ## Discussion
 
 - The problem is **nonlinear**, so Newton needs genuine iterations — about **2
-  per step at `Float64`** with `Δt = 0.1`. The robust line searches (`Static`,
-  `Backtracking`, `Bisection`, `StrongWolfe`) and `DogLeg` again behave almost
-  identically, so in this mildly nonlinear regime the line search barely affects
-  the iteration count.
-- **Every configuration converges at `Float16` and above** — 72 of the 96 runs.
-  `Newton/Quadratic` converges throughout, as it does on the
+  per step at `Float64`** with `Δt = 0.1`. The `Static`, `Backtracking` and
+  `StrongWolfe` line searches and `DogLeg` again behave identically, so in this
+  mildly nonlinear regime the line search barely affects the iteration count.
+  `Bisection` is the exception, at 5.6 iterations per step at `Float64`.
+- **Every configuration but `Picard` converges at `Float32` and `Float64`** — 21/24
+  at each. `Newton/Quadratic` converges at both, as it does on the
   [Harmonic Oscillator](@ref).
-- **`BFloat16` converges only with `NoInitialGuess`** (8/24). As for the
+- **`Float16` converges 13/24.** `MidpointExtrapolation` fails for every solver,
+  for the reason given under [Harmonic Oscillator](@ref): the `Float16`
+  [midpoint time collides](@ref float16_midpoint_time) with the grid.
+  `Newton/Quadratic` with `HermiteExtrapolation` fails as well.
+- **`BFloat16` converges only with `NoInitialGuess`** (7/24). As for the
   [Harmonic Oscillator](@ref), this is the `BFloat16` time grid rather than the
   solver: at ``\Delta t = 0.1`` over ``(0, 100)`` consecutive times collide, and
   the extrapolating initial guesses cannot difference them. At the
-  [coarse step](@ref pendulum_dt1) it recovers to 23/24.
-- **`Picard`** needs roughly 8 iterations per step and is, as for the harmonic
-  oscillator, the most sensitive to the initial guess
-  (`MidpointExtrapolation` fewest, `NoInitialGuess` most).
+  [coarse step](@ref pendulum_dt1) it recovers to 19/24.
+- **`Picard`** converges on none of the 12 runs, at about 2 iterations per step;
+  see [Key Findings](@ref) for why.
 - Energy drift scales with precision just as for the [Harmonic Oscillator](@ref).
 
 ## Results table
@@ -80,8 +83,8 @@ markdown_table(summary_table(df))
 
 With a ten times larger step the equations become more strongly nonlinear, which
 stresses the solvers noticeably more than the ``\Delta t = 0.1`` results above:
-Newton's iteration count rises to ≈ 3.3 per step and `Picard` needs ≈ 30. Every
-configuration still converges.
+Newton's iteration count at `Float32` and `Float64` rises to ≈ 3.4 per step. Every
+configuration but `Picard` still converges at those two precisions.
 
 ```@example pendulum
 spec1 = pendulum_spec(timespan = (0.0, 100.0), timestep = 1.0)

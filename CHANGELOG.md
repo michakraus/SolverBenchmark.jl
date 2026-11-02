@@ -43,6 +43,28 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **The implicit-midpoint pages are measured again on the current stack (removes
+  `KNOWN_ISSUES.md` K6), and K7 names why `Picard` fails.** `scripts/run_all.jl` on
+  GeometricIntegrators 0.18.7, GeometricIntegratorsBase 0.6.10 and SimpleSolvers 0.14.3
+  reproduces the counts of Key Findings; the pages follow it. `Picard` converges nowhere, so
+  the pages no longer describe its iteration counts: SimpleSolvers' `Picard` steps
+  `x ← x - F(x)` while `ImplicitMidpoint` hands it `F(x) = Φ(x) - x`, which makes the step
+  `x ← 2x - Φ(x)` (K7, now kind `upstream`, reproduced by `scripts/picard_residual_sign.jl`).
+  At `Float32`/`Float64` every other configuration converges on the oscillator, the pendulum and
+  the Toda lattice (21/24 each, from 24/24 on the first two). `Float16` loses
+  `MidpointExtrapolation` on every fine-step sweep, because ``t - \Delta t/2`` rounds onto the
+  previous grid time from ``t = 64.2`` on `0:0.1:100` and from ``t = 8.01`` on `0:0.01:10`: the
+  oscillator goes to 14/24 (from 24/24), the pendulum to 13/24 (from 24/24), the Toda lattice to
+  14/24 (from 21/24); `docs/src/precision.md` documents the collision. `BFloat16` on the
+  oscillator is 7/24 and 22/24 (from 8/24 and 24/24), on the pendulum at Δt = 1.0 19/24 (from
+  23/24). Lotka–Volterra 2d `Float16` is 7/24 at both steps (from 9/24 and 13/24) and `BFloat16`
+  2/24 at Δt = 0.1 (from 7/24); 4d `Float16` 11/24 and 4/24 (from 14/24 and 6/24) and
+  `BFloat16` 4/24 at Δt = 0.1 (from 6/24). The double pendulum at Δt = 0.01 converges 46/96
+  (from 58/96) and 54/96 at Δt = 0.1 (from 64/96), and its residual-floor table in
+  `docs/src/precision.md` is measured again (≈ 200 … 256 ε(T), from ≈ 150 … 260). The
+  `16√eps(T)` entry of the `BFloat16` ladder in `docs/src/precision.md` is marked on rung 4,
+  where it is, instead of rung 3. The comparison of `f_abstol_factor = 8` against `256`
+  (`scripts/f_abstol_study.jl`) is not run again.
 - **Key Findings and the nonlinear pages are measured again, on `NonlinearIntegrators` 0.5, and
   no longer describe regularization as required (closes `KNOWN_ISSUES.md` K5).**
   `NonlinearIntegrators` 0.5 takes the minimum-norm step of a rank-revealing Newton solve, so at
@@ -55,7 +77,7 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   longer buildable (K8), so the 16-bit rows fail before the solve for two different reasons.
   The implicit-midpoint numbers of Key Findings move with the stack as well: `Picard` converges
   on 1 of 144 rows (from 44, K7), `Float64` on 248 of 288 (from 263), and the robust solvers
-  take about 1.4 iterations per step (from 1.15). `docs/src/index.md`, the comment above the
+  take about 1.4 iterations per step (from 1.34). `docs/src/index.md`, the comment above the
   nonlinear set in `src/nonlinear.jl` and the docstring of `nonlinear_regularization_factors`
   follow. K6 records the implicit-midpoint pages that still quote the earlier numbers.
 - **The bounds move to `NonlinearIntegrators` 0.5 and the `GeometricBase` 0.15 releases it builds
