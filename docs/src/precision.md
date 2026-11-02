@@ -87,8 +87,8 @@ a solver problem.** `Float16`, with 11 significand bits, has spacing `0.0625` at
 ``t = 100`` and resolves the same grid.
 
 Note the direction of the effect: a *larger* time step makes it better, against every
-other trend in the study. The harmonic oscillator converges 8/24 at
-``\Delta t = 0.1`` and 24/24 at ``\Delta t = 1.0``.
+other trend in the study. The harmonic oscillator converges 7/24 at
+``\Delta t = 0.1`` and 22/24 at ``\Delta t = 1.0``.
 
 !!! tip "Only compare the 16-bit formats where the grid resolves"
     Any sweep whose ``\Delta t`` is below the `BFloat16` spacing at `tend` loses two
@@ -97,6 +97,17 @@ other trend in the study. The harmonic oscillator converges 8/24 at
     `0.0625`); the ``\Delta t = 0.1`` and ``\Delta t = 1.0`` sweeps are the honest
     comparisons.
 
+### [`Float16` collides at the midpoint time](@id float16_midpoint_time)
+
+`Float16` resolves the grid itself, but not always the midpoint of a step.
+`MidpointExtrapolation` extrapolates to ``t - \Delta t/2``, and once the spacing of
+`Float16` reaches ``\Delta t/2`` that time can round onto the previous grid time: on
+`0:0.1:100` from step 642 on (``t = 64.2``, spacing `0.0625`), on `0:0.01:10` from
+step 801 on (``t = 8.01``). From that step the initial guess is `NaN` and the solve
+raises `non-finite direction vector` — for *every* solver. So every ``\Delta t = 0.1``
+sweep over ``(0, 100)`` and every ``\Delta t = 0.01`` sweep over ``(0, 10)`` loses
+`MidpointExtrapolation` at `Float16`; the coarse steps do not collide.
+
 ## How the residual tolerance scales
 
 The solver's absolute residual tolerance is `f_abstol_factor * eps(T)`, with the
@@ -104,15 +115,15 @@ factor stored per problem on [`ProblemSpec`](@ref) and defaulting to `8` — the
 framework's own default (see [Solver options](@ref)).
 
 **The factor is a property of the problem, not of the precision.** On the double
-pendulum the residual floor measures ``\approx 200 \dots 260\,\varepsilon(T)`` at
+pendulum the residual floor measures ``\approx 200 \dots 256\,\varepsilon(T)`` at
 *every* precision:
 
 | Precision | `max_residual` at ``\Delta t = 0.01`` | ``\div\ \varepsilon(T)`` |
 |:----------|--------------------------------------:|-------------------------:|
-| `BFloat16` | 1.2 – 1.5 | 154 – 192 |
-| `Float16` | 0.19 – 0.25 | 195 – 256 |
-| `Float32` | 2.8e-5 – 3.1e-5 | 235 – 260 |
-| `Float64` | 5.0e-14 – 5.7e-14 | 225 – 257 |
+| `BFloat16` | 1.6 – 1.8 | 200 – 231 |
+| `Float16` | 0.249 – 0.25 | 255 – 256 |
+| `Float32` | 3.0e-5 – 3.05e-5 | 250 – 256 |
+| `Float64` | 5.55e-14 – 5.67e-14 | 250 – 255 |
 
 The floor is set by the problem's ``O(g m l)`` force scale, which ``\varepsilon(T)``
 already tracks — so a precision-dependent factor has nothing left to compensate for.
@@ -124,7 +135,7 @@ the floor" into "failed".
 Two specs are worth knowing about:
 
 - **The double pendulum keeps `f_abstol_factor = 256`**, and needs it: at the default
-  `8` its 16-bit columns are empty (0/24 each against 5/24 and 11/24).
+  `8` its 16-bit columns are empty (0/24 each against 2/24 and 4/24).
 - **The Toda lattice does not**, and uses the framework default: `256` there buys 3
   converged runs of 96 at ``\Delta t = 0.1`` and 1 at ``\Delta t = 1.0``, while
   costing one to two orders of magnitude of residual on every run that converges
@@ -154,7 +165,7 @@ useful shift in double precision over-damps half precision several times over:
 
 | Precision | ``\sqrt{\varepsilon(T)}`` | rung 1 | rung 2 | rung 3 | rung 4 | rung 5 | rung 6 |
 |:----------|--------:|-------:|-------:|-------:|-------:|-------:|-------:|
-| `BFloat16` | 8.84e-2 | 0.177 | 0.354 | **0.707** | 1.414 | 2.828 | 5.656 |
+| `BFloat16` | 8.84e-2 | 0.177 | 0.354 | 0.707 | **1.414** | 2.828 | 5.656 |
 | `Float16` | 3.13e-2 | 0.0625 | 0.125 | 0.25 | **0.5** | 1.0 | 2.0 |
 | `Float32` | 3.45e-4 | 6.91e-4 | 1.38e-3 | 2.76e-3 | **5.52e-3** | 1.10e-2 | 2.21e-2 |
 | `Float64` | 1.49e-8 | 5.96e-8 | **2.38e-7** | 9.54e-7 | 3.81e-6 | 1.53e-5 | 6.10e-5 |

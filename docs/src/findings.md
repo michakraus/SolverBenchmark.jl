@@ -37,7 +37,13 @@ of 112 runs each (4 precisions × 4 solvers × 7 regularization factors).
   without meeting the tolerance: at `Float64` on the oscillator it takes 2.0 to 2.05
   iterations per step and leaves a residual of `2.2e-4` to `0.25`. On the
   [Toda Lattice](@ref) it is the *only* failure at `Float32`/`Float64`, and over all
-  twelve sweeps it is 36 of the 40 failures at `Float64`.
+  twelve sweeps it is 36 of the 40 failures at `Float64`. The cause is a sign: the
+  `Picard` of SimpleSolvers steps ``x \gets x - F(x)``, the fixed-point iteration
+  ``x \gets \Phi(x)`` for a residual ``F(x) = x - \Phi(x)``, while `ImplicitMidpoint`
+  hands it ``F(x) = \Phi(x) - x``. The step is then ``x \gets 2x - \Phi(x)``, which
+  expands by a factor of about 2 where ``\Phi`` contracts (`0.05` on the oscillator at
+  ``\Delta t = 0.1``), and the solve stops on a frozen iterate.
+  `scripts/picard_residual_sign.jl` reproduces it.
 
 ## Reading the residual columns
 
@@ -97,7 +103,12 @@ are then handed two identical times and abort for *every* solver, leaving only
 `NoInitialGuess`. This is a property of the time grid, not of the solver, and it
 reverses the usual trend — the oscillator goes from 7/24 at ``\Delta t = 0.1`` to
 22/24 at ``\Delta t = 1.0``, the one place in this study where a larger step helps.
-`Float16`, with 11 significand bits, resolves both grids.
+`Float16`, with 11 significand bits, resolves both grids, but not the midpoint of
+every step: from ``t = 64.2`` on `0:0.1:100`, and from ``t = 8.01`` on `0:0.01:10`,
+``t - \Delta t/2`` rounds onto the previous grid time, and `MidpointExtrapolation`
+fails for every solver. That is why `Float16` converges 14/24 on the oscillator at
+``\Delta t = 0.1`` and 21/24 at ``\Delta t = 1.0`` (see
+[the midpoint-time collision](@ref float16_midpoint_time)).
 
 Only compare the two formats at a ``\Delta t`` where the `BFloat16` grid resolves,
 or the second effect will be mistaken for the first.

@@ -56,23 +56,32 @@ plot_energy_drift(df)
 
 - Being an implicit, non-canonical system, the implicit midpoint equations are
   genuinely nonlinear: **`Newton` (with a robust line search) and `DogLeg`
-  converge in about 2 iterations per step** at `Float32`/`Float64`.
-- **`Picard` never converges** on this system — unlike the harmonic oscillator and
-  pendulum (where it converged, if slowly), the fixed-point iteration diverges on
-  the non-canonical `iodeproblem` formulation. It is the *only* solver that fails
-  at `Float32`/`Float64`: every other configuration converges at both precisions.
-- **`Float16` largely fails** (9/24 here, 13/24 at the coarse step): the Newton
-  linear solve hits singular Jacobians and the trajectory diverges. `Float32`
-  (19/24) and `Float64` (21/24) behave essentially identically — the achievable
+  converge in about 2 iterations per step** at `Float64`, and in about 1 at
+  `Float32`.
+- **`Picard` never converges** on this system. Its residual
+  ``\vartheta(Q) - \bar{p} - \tfrac{h}{2} f`` is not of fixed-point form for the
+  non-canonical `iodeproblem` formulation, so the fixed-point iteration has nothing
+  to contract. It is the *only* solver that fails at `Float64`; at `Float32`
+  `Newton/Quadratic` with `MidpointExtrapolation` fails too.
+- **`Float16` largely fails** (7/24 here, 7/24 at the coarse step): the Newton
+  linear solve hits singular Jacobians and the trajectory diverges, and here
+  `MidpointExtrapolation` also meets the
+  [`Float16` midpoint-time collision](@ref float16_midpoint_time). `Float32`
+  (20/24) and `Float64` (21/24) behave essentially identically — the achievable
   step accuracy is already reached at `Float32`.
-- **`BFloat16` does worse than `Float16`, not better** — 1/24 here and 7/24 at
-  the coarse step, against 9/24 and 13/24. This is the comparison the two 16-bit
+- **`BFloat16` does worse than `Float16`, not better** — 1/24 here and 2/24 at
+  the coarse step, against 7/24 and 7/24. This is the comparison the two 16-bit
   formats were added for, and it identifies the cause: the failures come from
   near-singular Jacobians, which need *significand* bits, and `BFloat16` trades
   three of them away for exponent range this problem never needs. (At
   ``\Delta t = 0.01`` the `BFloat16` figure is further depressed by the
   time-grid collision described under [Harmonic Oscillator](@ref); the coarse
   step is the honest comparison.)
+- **The 16-bit counts above are those of `scripts/run_all.jl`**, whose
+  `BenchmarkTools` timing drives each integrator many times; a later drive can
+  raise, and the row is then recorded as not converged. The single timing pass of
+  the tables on this page keeps five more `NoInitialGuess` runs: `Float16` 8/24
+  and 9/24, `BFloat16` 2/24 and 3/24.
 - As always the **initial guess** matters only for the solvers that iterate more;
   for the one- to two-iteration Newton/DogLeg runs it has little effect.
 

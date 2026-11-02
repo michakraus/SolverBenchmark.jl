@@ -64,10 +64,14 @@ plot_energy_drift(df)
 
 - The 16-dimensional implicit solve is the most expensive of the examples, so
   the run-time differences between solver configurations are more pronounced.
-- **`Float16`, `Float32` and `Float64` are indistinguishable in convergence**
-  (21/24 each at ``\Delta t = 0.1``): despite being the highest-dimensional
-  problem of the set, the Toda lattice is well conditioned, and the three failures
-  in each column are `Picard`, which never converges here.
+- **`Float32` and `Float64` are indistinguishable in convergence** (21/24 each at
+  ``\Delta t = 0.1``): despite being the highest-dimensional problem of the set,
+  the Toda lattice is well conditioned, and the three failures in each column are
+  `Picard`, which never converges here. `Float16` converges 14/24: it loses
+  `MidpointExtrapolation` to the
+  [midpoint-time collision](@ref float16_midpoint_time), and at
+  ``\Delta t = 1.0``, where the grid does not collide, it matches the other two at
+  21/24.
 - **`BFloat16` reaches only 7/24 at ``\Delta t = 0.1`` but 21/24 at
   ``\Delta t = 1.0``**, matching the other three. The difference is not the
   solver but the time grid: at the finer step `BFloat16` cannot represent

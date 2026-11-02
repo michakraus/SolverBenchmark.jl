@@ -55,18 +55,24 @@ plot_energy_drift(df)
 ## Discussion
 
 - As for the 2d system, **`Newton` (robust line search) and `DogLeg` converge in
-  about 2 iterations per step** at `Float32`/`Float64` (slightly more than the 2d
-  case, ≈ 2.3), while **`Picard` never converges**. As for the 2d system, `Picard`
+  about 2 iterations per step** at `Float64` (slightly more than the 2d case,
+  ≈ 2.3) and in about 1 at `Float32`, while **`Picard` never converges**. `Picard`
   is the only failure at `Float32`/`Float64`.
 - The stronger degeneracy makes **the 16-bit formats fail readily** — the Newton
   linear solve raises a singular-Jacobian error for most configurations.
-  `Float16` reaches 14/24 here but only 6/24 at the coarse step; `BFloat16`
-  manages 2/24 and 6/24. `Float32` and `Float64` (21/24 each) again give
-  essentially the same convergence pattern.
-- **`BFloat16` never beats `Float16`** here either — the two tie at 6/24 at the
+  `Float16` reaches 11/24 here, where `MidpointExtrapolation` also meets the
+  [midpoint-time collision](@ref float16_midpoint_time), but only 4/24 at the
+  coarse step; `BFloat16` manages 2/24 and 4/24. `Float32` and `Float64` (21/24
+  each) again give essentially the same convergence pattern.
+- **`BFloat16` never beats `Float16`** here either — the two tie at 4/24 at the
   coarse step, where the `BFloat16` time grid is not itself a limitation. As for
   the [2d system](@ref lotka_volterra_2d_dt01), the obstacle is Jacobian
   conditioning, which wants significand bits rather than exponent range.
+- **The 16-bit counts above are those of `scripts/run_all.jl`**, whose
+  `BenchmarkTools` timing drives each integrator many times; a later drive can
+  raise, and the row is then recorded as not converged. The single timing pass of
+  the tables on this page keeps two more `BFloat16` runs at ``\Delta t = 0.01``:
+  4/24.
 - This example demonstrates the harness's robustness: configurations that throw a
   `SingularException` (rather than merely diverging) are caught and recorded as
   non-converged instead of aborting the sweep.
@@ -80,8 +86,8 @@ markdown_table(summary_table(df))
 ## [Coarse time step (Δt = 0.1)](@id lotka_volterra_4d_dt01)
 
 The same benchmark over ``(0, 10)`` with a ten times larger step. As for the 2d
-system the converging solvers need more iterations (≈ 3.4 per step instead of
-≈ 2), the same configurations keep failing, and `Float16` fails almost entirely.
+system the converging solvers need more iterations (≈ 3.1 per step instead of
+≈ 1.9), the same configurations keep failing, and `Float16` fails almost entirely.
 
 ```@example lv4
 spec1 = lotka_volterra_4d_spec(timespan = (0.0, 10.0), timestep = 0.1)
