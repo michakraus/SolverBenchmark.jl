@@ -67,8 +67,8 @@ plot_accuracy(df)
 - Because the problem is linear, the implicit midpoint equations are linear too,
   so **Newton converges in exactly one iteration per step** with the `Static`,
   `Backtracking`, `BierlaireQuadratic` and `StrongWolfe` line searches, as does
-  `DogLeg`. `Bisection` is the exception, at up to 5 iterations per step at
-  `Float64`, and `Quadratic` takes 1.3 at `Float32`.
+  `DogLeg` except at `Float16` (1.07). `Bisection` is the exception, at up to 5
+  iterations per step at `Float64`, and `Quadratic` takes 1.3 at `Float32`.
 - **Every configuration but `Picard` converges at `Float32` and `Float64`**: 21/24
   at each. That includes the `Quadratic` and `BierlaireQuadratic` line searches,
   which need SimpleSolvers 0.10 or later to converge here.

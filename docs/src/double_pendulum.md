@@ -69,8 +69,8 @@ plot_energy_drift(df)
   here, and at `Δt = 0.01` it is the only failure at `Float64`; at `Float32`
   `Newton/Static` with `MidpointExtrapolation` and `Newton/Quadratic` with
   `NoInitialGuess` fail too. At the coarse step `DogLeg` with
-  `HermiteExtrapolation` fails at both precisions, and at `Float64` three `Newton`
-  runs do as well.
+  `HermiteExtrapolation` fails at both precisions, and so do one `Newton` run at
+  `Float32` and three at `Float64`.
 - **Precision dominates**: 21/24 at `Float64`, 19/24 at `Float32`, 4/24 at
   `Float16` and 2/24 at `BFloat16` (46/96 overall; 54/96 at the coarse step).
   Every converged row is flagged in the `at_tolerance` column, because on this

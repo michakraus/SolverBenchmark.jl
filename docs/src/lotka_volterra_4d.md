@@ -68,6 +68,11 @@ plot_energy_drift(df)
   coarse step, where the `BFloat16` time grid is not itself a limitation. As for
   the [2d system](@ref lotka_volterra_2d_dt01), the obstacle is Jacobian
   conditioning, which wants significand bits rather than exponent range.
+- **The 16-bit counts above are those of `scripts/run_all.jl`**, whose
+  `BenchmarkTools` timing drives each integrator many times; a later drive can
+  raise, and the row is then recorded as not converged. The single timing pass of
+  the tables on this page keeps two more `BFloat16` runs at ``\Delta t = 0.01``:
+  4/24.
 - This example demonstrates the harness's robustness: configurations that throw a
   `SingularException` (rather than merely diverging) are caught and recorded as
   non-converged instead of aborting the sweep.

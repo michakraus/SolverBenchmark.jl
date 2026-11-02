@@ -90,6 +90,13 @@ Note the direction of the effect: a *larger* time step makes it better, against 
 other trend in the study. The harmonic oscillator converges 7/24 at
 ``\Delta t = 0.1`` and 22/24 at ``\Delta t = 1.0``.
 
+!!! tip "Only compare the 16-bit formats where the grid resolves"
+    Any sweep whose ``\Delta t`` is below the `BFloat16` spacing at `tend` loses two
+    of its three initial guesses for reasons unrelated to the solver. The
+    ``\Delta t = 0.01`` sweeps over ``(0, 10)`` are confounded this way (spacing
+    `0.0625`); the ``\Delta t = 0.1`` and ``\Delta t = 1.0`` sweeps are the honest
+    comparisons.
+
 ### [`Float16` collides at the midpoint time](@id float16_midpoint_time)
 
 `Float16` resolves the grid itself, but not always the midpoint of a step.
@@ -100,13 +107,6 @@ step 801 on (``t = 8.01``). From that step the initial guess is `NaN` and the so
 raises `non-finite direction vector` — for *every* solver. So every ``\Delta t = 0.1``
 sweep over ``(0, 100)`` and every ``\Delta t = 0.01`` sweep over ``(0, 10)`` loses
 `MidpointExtrapolation` at `Float16`; the coarse steps do not collide.
-
-!!! tip "Only compare the 16-bit formats where the grid resolves"
-    Any sweep whose ``\Delta t`` is below the `BFloat16` spacing at `tend` loses two
-    of its three initial guesses for reasons unrelated to the solver. The
-    ``\Delta t = 0.01`` sweeps over ``(0, 10)`` are confounded this way (spacing
-    `0.0625`); the ``\Delta t = 0.1`` and ``\Delta t = 1.0`` sweeps are the honest
-    comparisons.
 
 ## How the residual tolerance scales
 

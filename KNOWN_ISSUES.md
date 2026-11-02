@@ -32,10 +32,10 @@
   before the stack moved. In GeometricIntegrators 0.16.2 the exported name `ImplicitMidpoint` is
   that implicit Runge–Kutta method (`struct ImplicitMidpoint <: IRKMethod`); on the current stack
   it names GeometricIntegratorsBase's own integrator, so the earlier `Picard` rows ran on the other
-  residual. Which release made the switch is not checked. Of the 57 `Picard` rows that raise `non-finite direction vector` or
-  the Hermite identical-times `ArgumentError`, 24 sit in a precision and initial-guess column
-  where no other solver converges either (the time-grid limits of `docs/src/precision.md`);
-  the other 33 are not traced one by one.
+  residual. Which release made the switch is not checked. Of the 57 `Picard` rows that raise
+  `non-finite direction vector` or the Hermite identical-times `ArgumentError`, 24 sit in a
+  precision and initial-guess column where no other solver converges either (the time-grid
+  limits of `docs/src/precision.md`); the other 33 are not traced one by one.
   `scripts/picard_residual_sign.jl` reproduces both halves without the harness: SimpleSolvers'
   `PicardSolver` on `Φ(x) = cos(x) / 2` converges in 24 iterations with `F = x - Φ(x)` and not
   in 100 with `F = Φ(x) - x`, and `integrate` with `ImplicitMidpoint()` and `Picard()` ends the
@@ -67,8 +67,8 @@
   `max_residual > f_abstol`: one implicit-midpoint row (the double pendulum at Δt = 0.1,
   `Float16`, `Newton/BierlaireQuadratic`, `HermiteExtrapolation`, `0.474` against `0.25`) and 59
   nonlinear rows at `Float64` (28 each on the double pendulum and the Toda lattice at Δt = 0.1,
-  three on the oscillator at Δt = 0.1 and 10.0; up to `3.1e-10` against `5.7e-14`). Driving two of them step by
-  step: the double-pendulum row accepts step 64 at `rfₐ = 0.474` with
+  three on the oscillator at Δt = 0.1 and 10.0; up to `3.1e-10` against `5.7e-14`). Driving
+  two of them step by step: the double-pendulum row accepts step 64 at `rfₐ = 0.474` with
   `f_reltol ‖F(x₀)‖ = 2.70` (`x_converged = true`, `f_converged = false`); the Toda-lattice
   LODE row, `DogLeg`, λ = 0, accepts six steps above `f_abstol`, step 3 at `rfₐ = 5.75e-14` with
   `f_reltol ‖F(x₀)‖ = 3.4e-13`. With `f_reltol = 0` both rows report `converged = false`.
@@ -91,9 +91,8 @@
   sweeps (`:quick`), the CSVs of `scripts/run_all.jl` (`:benchmark`) disagree on `converged` in
   7 of 1152 implicit-midpoint rows, all of them 16-bit `NoInitialGuess` rows on the
   Lotka–Volterra systems: 2 at Δt = 0.01 and 3 at Δt = 0.1 in 2d, 2 at Δt = 0.01 in 4d; the CSV
-  says `false` in each. So the prose of `docs/src/lotka_volterra_2d.md` and
-  `docs/src/lotka_volterra_4d.md`, taken from the CSVs, gives lower 16-bit counts than the
-  results tables rendered beside it. `run_nonlinear_case` (`src/nonlinear.jl:297`) times the
+  says `false` in each. `docs/src/lotka_volterra_2d.md` and `docs/src/lotka_volterra_4d.md`
+  therefore state both counts. `run_nonlinear_case` (`src/nonlinear.jl:297`) times the
   same way.
 - **kind:** defect
 - **found:** 2026-11-02

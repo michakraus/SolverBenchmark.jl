@@ -54,8 +54,9 @@ plot_energy_drift(df)
 
 - The problem is **nonlinear**, so Newton needs genuine iterations — about **2
   per step at `Float64`** with `Δt = 0.1`. The `Static`, `Backtracking` and
-  `StrongWolfe` line searches and `DogLeg` again behave identically, so in this
-  mildly nonlinear regime the line search barely affects the iteration count.
+  `StrongWolfe` line searches and `DogLeg` again behave identically at `Float32`
+  and `Float64`, so in this mildly nonlinear regime the line search barely affects
+  the iteration count.
   `Bisection` is the exception, at 5.6 iterations per step at `Float64`.
 - **Every configuration but `Picard` converges at `Float32` and `Float64`** — 21/24
   at each. `Newton/Quadratic` converges at both, as it does on the

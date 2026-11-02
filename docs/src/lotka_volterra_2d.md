@@ -77,6 +77,11 @@ plot_energy_drift(df)
   ``\Delta t = 0.01`` the `BFloat16` figure is further depressed by the
   time-grid collision described under [Harmonic Oscillator](@ref); the coarse
   step is the honest comparison.)
+- **The 16-bit counts above are those of `scripts/run_all.jl`**, whose
+  `BenchmarkTools` timing drives each integrator many times; a later drive can
+  raise, and the row is then recorded as not converged. The single timing pass of
+  the tables on this page keeps five more `NoInitialGuess` runs: `Float16` 8/24
+  and 9/24, `BFloat16` 2/24 and 3/24.
 - As always the **initial guess** matters only for the solvers that iterate more;
   for the one- to two-iteration Newton/DogLeg runs it has little effect.
 
