@@ -54,13 +54,20 @@ Build, dependency and CI notes for this repository.
   `@ref` still fails there — after every sweep has run, which is what makes it an
   expensive mistake. `docs/make.jl` deploys only when `DEPLOY_DOCS` is `true`, which the
   workflow sets from `needs.sweep.result`, so an incomplete run publishes nothing and
-  uploads the site as an artifact instead.
+  uploads the site as an artifact instead. The job then fails in its last step, so a
+  failed sweep fails the `Documenter` check even when the build recomputed it.
 - **The docs are built only by `.github/workflows/Documenter.yml`.** `CI.yml` runs the
   tests; building the docs there too would duplicate hours of compute and race the other
   build for `gh-pages`.
+- **`Documenter` is a required status check.** The docs are the main product of this
+  repository, so a pull request that breaks them cannot merge. The check sits in a ruleset
+  of its own, `docs`, beside the ruleset `main`: `harness ci-protection` rewrites `main`
+  with the list of checks shared by every package and would drop it there. Renaming the
+  `documenter` job, or its `name:`, leaves every pull request waiting for a check that
+  never reports; change the ruleset in the same step.
 
-!!! warning "The documentation is built on macOS, and why"
-    On Linux with Julia 1.12 (LLVM 18.1.7) the sweeps abort mid-run with a silent
+!!! warning "The documentation is built on arm64 Linux, and why"
+    On x86-64 Linux with Julia 1.12 (LLVM 18.1.7) the sweeps abort mid-run with a silent
     `SIGABRT`: exit 134, no exception, no stack trace, nothing on stderr even under a pty.
     A core dump named it:
 
@@ -92,11 +99,14 @@ Build, dependency and CI notes for this repository.
         excluded. The tell is timing: a no-op reaches `ExpandTemplates` half a minute
         later, where a genuine precompile of this stack takes eleven minutes.
 
-    So both jobs run on `macos-latest`, which is arm64 and uses a different LLVM backend,
-    with Julia `1.12`, the package's `[compat]` floor. Revisit once a Julia release carries
-    a fixed LLVM — running on macOS is a workaround for an upstream bug, not a requirement
-    of this package, which supports 1.12 upwards and is tested across all three platforms
-    by `CI.yml`.
+    So both jobs run on `ubuntu-24.04-arm`, which is arm64 and uses LLVM's AArch64
+    backend, with Julia `1.12`, the package's `[compat]` floor. These runners are free for
+    a public repository and share the account's Linux job limit, so all eighteen sweeps
+    run at once; `macos-latest` is arm64 too, but its limit of five jobs at a time, shared
+    with every repository of the account, can queue sweeps for over two hours. Revisit
+    once a Julia release carries a fixed LLVM — avoiding x86-64 is a workaround for an
+    upstream bug, not a requirement of this package, which supports 1.12 upwards and is
+    tested across all three platforms by `CI.yml`.
 - **Documenter inlines figures as base64**, so several figures per page comfortably
   exceed the default page-size limit. `size_threshold` (and
   `size_threshold_warn`) are raised in the `Documenter.HTML` block of
