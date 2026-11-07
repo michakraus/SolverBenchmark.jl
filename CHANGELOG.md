@@ -43,6 +43,12 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
 
 ### Changed
 
+- **The documentation is built on arm64 Linux, and `Documenter` is a required check.** Both
+  jobs of `Documenter.yml` run on `ubuntu-24.04-arm` instead of `macos-latest`. arm64 still
+  avoids the Julia 1.12 `SIGABRT` in LLVM's X86 backend, and the Linux runners are not held to
+  the account's limit of five macOS jobs at a time, which queued a run for up to 2 h 48 min
+  where the longest sweep took 33 min. A pull request now cannot merge with broken docs: the
+  `Documenter` job fails whenever a sweep failed, and the ruleset `docs` requires it.
 - **The implicit-midpoint pages are measured again on the current stack (removes
   `KNOWN_ISSUES.md` K6), and K7 names why `Picard` fails.** `scripts/run_all.jl` on
   GeometricIntegrators 0.18.7, GeometricIntegratorsBase 0.6.10 and SimpleSolvers 0.14.3

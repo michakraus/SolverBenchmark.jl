@@ -34,7 +34,7 @@ jobs:
   # splitting them is what shortens it.
   sweep:
     name: Sweep ${{ matrix.id }}
-    runs-on: macos-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     strategy:
       # One diverging integrator must not stop the remaining sweeps from being computed.
@@ -78,9 +78,9 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()
             Pkg.precompile()'
-      # Julia 1.12, the package's `[compat]` floor, on macOS. On Linux with Julia 1.12
-      # (LLVM 18.1.7) these sweeps abort mid-run with a silent SIGABRT, which a core
-      # dump identified as `llvm::SelectionDAGISel::CannotYetSelect` — LLVM's X86
+      # Julia 1.12, the package's `[compat]` floor, on arm64 Linux. On x86-64 Linux with
+      # Julia 1.12 (LLVM 18.1.7) these sweeps abort mid-run with a silent SIGABRT, which a
+      # core dump identified as `llvm::SelectionDAGISel::CannotYetSelect` — LLVM's X86
       # backend failing to select an instruction while the JIT compiles a method,
       # calling `report_fatal_error` and so `abort()`. Because it aborts inside LLVM it
       # never becomes a Julia exception, which is why it produced no error, no stack
@@ -90,20 +90,21 @@ jobs:
       # Neither BLAS threading nor OpenBLAS kernel dispatch was involved; both were tested
       # and changed nothing.
       #
-      # arm64 macOS uses a different LLVM backend entirely and has never reproduced it, on
-      # CI or locally. Revisit once a Julia release carries a fixed LLVM.
+      # arm64 uses LLVM's AArch64 backend, not the X86 one, and has never reproduced it, on
+      # CI or locally. The arm64 Linux runners share the account's Linux job limit rather
+      # than its much smaller macOS one, so all sweeps run at once. Revisit once a Julia
+      # release carries a fixed LLVM.
       - name: Runner diagnostics
         run: |
           julia -e 'using InteractiveUtils; versioninfo(verbose = false)'
           julia -e 'using LinearAlgebra; @show BLAS.get_config(); @show BLAS.get_num_threads()'
-          sysctl -n machdep.cpu.brand_string
-          echo "memory: $(( $(sysctl -n hw.memsize) / 1024 / 1024 / 1024 )) GB, $(sysctl -n hw.ncpu) cores"
+          lscpu
+          free -g
       # Under a pty: Julia buffers `stdout`/`stderr` when they are pipes, as they are here,
-      # so a twenty-minute sweep would show nothing until it finished. BSD `script` takes
-      # the command as trailing arguments rather than util-linux's `-e -c`, and propagates
-      # the command's exit status (verified: `exit 7` gives 7, an abort gives 6).
+      # so a twenty-minute sweep would show nothing until it finished. util-linux `script`
+      # takes the command through `-c`, and `-e` makes it return the command's exit status.
       - name: Compute the sweeps
-        run: script -q /dev/null julia --project=docs docs/make.jl
+        run: script -q -e -c "julia --project=docs docs/make.jl" /dev/null
         env:
           DOCS_PAGES: ${{ matrix.page }}.md
           SOLVERBENCHMARK_SWEEPS: ${{ matrix.sweeps }}
@@ -119,10 +120,14 @@ jobs:
     name: Documenter
     needs: sweep
     # Build even when some sweeps failed, so that there is a build log and a site to look
-    # at; the deployment itself is gated on a complete run below. `!cancelled()` still
-    # respects cancellation through the `concurrency` group.
+    # at; the deployment itself is gated on a complete run below, and the last step fails
+    # the job. `!cancelled()` still respects cancellation through the `concurrency` group.
+    #
+    # `Documenter` is a required status check, in the ruleset `docs` (not `main`, which
+    # `harness ci-protection` rewrites with the shared list). It is the one context that
+    # stands for the whole workflow, so it must fail whenever any sweep failed.
     if: ${{ !cancelled() }}
-    runs-on: macos-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
     permissions:
       contents: write
@@ -158,9 +163,9 @@ jobs:
           ls -la sweepcache
           echo "collected $(ls sweepcache/*.csv 2>/dev/null | wc -l) sweeps (expected 24)"
       # Under a pty for the same reason as the sweep jobs: this build runs for minutes and
-      # buffered output would only appear at the end. BSD `script` form, as on macOS.
+      # buffered output would only appear at the end.
       - name: Build and deploy
-        run: script -q /dev/null julia --project=docs docs/make.jl
+        run: script -q -e -c "julia --project=docs docs/make.jl" /dev/null
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
@@ -176,3 +181,10 @@ jobs:
           path: docs/build
           retention-days: 7
           if-no-files-found: ignore
+      # A missing sweep can be recomputed above and leave a green build, so the result of
+      # the `sweep` jobs decides this job's status.
+      - name: Fail when a sweep failed
+        if: ${{ needs.sweep.result != 'success' }}
+        run: |
+          echo "::error::sweep jobs: ${{ needs.sweep.result }}"
+          exit 1
