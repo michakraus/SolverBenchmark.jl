@@ -7,7 +7,7 @@ Build, dependency and CI notes for this repository.
 - **Stdlib dependencies must be declared explicitly** in `Project.toml` — `Printf`,
   `Markdown` and `Logging` — each with `compat = "1"`. Without the compat entry
   `Pkg.add` pins them to the running Julia's stdlib version, which then conflicts
-  with `julia = "1.11"`.
+  with the `julia` floor in `[compat]`.
 - **After adding or changing a package dependency, re-resolve the docs environment**
   as well:
 
