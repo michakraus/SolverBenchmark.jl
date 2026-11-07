@@ -103,7 +103,7 @@ Build, dependency and CI notes for this repository.
     backend, with Julia `1.12`, the package's `[compat]` floor. These runners are free for
     a public repository and share the account's Linux job limit, so all eighteen sweeps
     run at once; `macos-latest` is arm64 too, but its limit of five jobs at a time, shared
-    with every repository of the account, queued the sweeps for up to two hours. Revisit
+    with every repository of the account, can queue sweeps for over two hours. Revisit
     once a Julia release carries a fixed LLVM — avoiding x86-64 is a workaround for an
     upstream bug, not a requirement of this package, which supports 1.12 upwards and is
     tested across all three platforms by `CI.yml`.
