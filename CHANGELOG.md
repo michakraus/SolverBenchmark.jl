@@ -282,6 +282,9 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   satisfied"* and nothing was deployed. The pin now equals the floor. The job stays on
   `macos-latest`, which is arm64: the Julia 1.12 `SIGABRT` described under *Changed* is in LLVM's
   X86 backend and has never reproduced on arm64.
+- **The maintenance page no longer names `julia = "1.11"` as the floor.** Its note on stdlib
+  `[compat]` entries now refers to the `julia` floor in `[compat]`, which is `1.12`, so the note
+  stays true when the floor moves again.
 - **The `at_tolerance` testset no longer asserts a boundary it cannot hold.** It
   required every solver configuration to converge on the double pendulum at
   `f_abstol_factor = 256`, where the residual floor is ≈250 eps(T) against a target of
