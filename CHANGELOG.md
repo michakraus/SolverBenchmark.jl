@@ -48,8 +48,9 @@ All notable changes to SolverBenchmark.jl are recorded here. The format follows
   `0.6.9` to `0.7`, `GeometricProblems` from `0.9.1` to `0.10` and `NonlinearIntegrators` from
   `0.5` to `0.6`. The breaking changes of these releases do not reach the package: nothing here
   uses `SymplecticEulerA` or `SymplecticEulerB`, which `GeometricIntegratorsBase` 0.7 exchanges,
-  or `LinearWave`, which `GeometricProblems` 0.10 changes, and `NonlinearIntegrators` 0.6 changes
-  its bounds only. The sweeps are not measured again: `docs/src/findings.md` states the versions
+  `SymplecticEulerARK` or `SymplecticEulerBRK`, which `GeometricIntegrators` 0.19 exchanges, or
+  `LinearWave`, which `GeometricProblems` 0.10 changes, and `NonlinearIntegrators` 0.6 changes its
+  bounds only. The sweeps are not measured again: `docs/src/findings.md` states the versions
   it was measured with, and its numbers stay a record of those.
 - **The documentation is built on arm64 Linux, and `Documenter` is a required check.** Both
   jobs of `Documenter.yml` run on `ubuntu-24.04-arm` instead of `macos-latest`. arm64 still
